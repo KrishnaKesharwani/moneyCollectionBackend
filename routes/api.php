@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\LoginController;
+use App\Http\Controllers\Api\CompanyController;
 
 
 /*
@@ -22,9 +23,7 @@ Route::post('login', [LoginController::class, 'login']);
 Route::middleware('auth:sanctum')->post('logout', [LoginController::class, 'logout']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('profile', function (Request $request) {
-        return response()->json($request->user());
-    });
+    Route::post('createcompany', [CompanyController::class, 'store']);
 });
 
 
