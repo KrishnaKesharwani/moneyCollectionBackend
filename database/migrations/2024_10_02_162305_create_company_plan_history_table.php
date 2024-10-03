@@ -16,6 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('plan_id');
             $table->decimal('amount', 15, 2)->default(0);
             $table->date('pay_date')->nullable();
+            $table->text('detail')->nullable();
             $table->foreign('plan_id')->references('id')->on('company_plans')->onDelete('cascade');
             $table->softDeletes();
             $table->timestamps();

@@ -50,7 +50,14 @@ class CompanyController extends Controller
                 
             }
         }
-        return response()->json(['message' => 'Company and Plan created successfully!'], 201);
+
+        if($company){
+            $company->main_logo = url($company->main_logo);
+            $company->sidebar_logo = url($company->sidebar_logo);
+            $company->favicon_icon = url($company->favicon_icon);
+            $company->owner_image = url($company->owner_image);
+        }
+        return response()->json(['message' => 'Company and Plan created successfully!', 'data' => $company], 201);
     }
 
     /**
@@ -66,17 +73,24 @@ class CompanyController extends Controller
             return null; // Return null if no image is provided
         }
 
-        // Decode the base64 image
-        $image = base64_decode($base64Image);
+        // Extract the mime type and the Base64 data
+        $imageParts = explode(';base64,', $base64Image);
 
-        // Generate a unique name for the image
-        $imageName = Str::random(10) . '.png';
+        // Get the image extension from the mime type
+        $imageTypeAux = explode('image/', $imageParts[0]);
+        $imageType = $imageTypeAux[1]; // e.g., 'jpeg', 'png', 'gif'
 
-        // Store the image in the specified directory (e.g., storage/app/public/logos/main)
-        $path = Storage::put("public/{$directory}/{$imageName}", $image);
+        // Decode the Base64 string into binary data
+        $imageData = base64_decode($imageParts[1]);
 
+        // Generate a unique file name for the image
+        $fileName = Str::random(10) . '.' . $imageType;
+
+        // Store the image in the public storage folder (or any custom directory)
+        $path = Storage::put("public/{$directory}/{$fileName}", $imageData);
+        
         // Return the stored path or URL to save in the database
-        return $path ? Storage::url($path) : null;
+        return 'storage/' .$directory.'/'.$fileName;
     }
 
     /**

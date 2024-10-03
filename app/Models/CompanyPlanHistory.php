@@ -15,5 +15,6 @@ class CompanyPlanHistory extends Model
         'plan_id',
         'amount',
         'pay_date',
+        'detail'
     ];
 }
