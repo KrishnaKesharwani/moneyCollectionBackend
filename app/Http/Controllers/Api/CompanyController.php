@@ -52,10 +52,10 @@ class CompanyController extends Controller
         }
 
         if($company){
-            $company->main_logo = url($company->main_logo);
-            $company->sidebar_logo = url($company->sidebar_logo);
-            $company->favicon_icon = url($company->favicon_icon);
-            $company->owner_image = url($company->owner_image);
+            $company->main_logo = url('storage/app/public/'.$company->main_logo);
+            $company->sidebar_logo = url('storage/app/public/'.$company->sidebar_logo);
+            $company->favicon_icon = url('storage/app/public/'.$company->favicon_icon);
+            $company->owner_image = url('storage/app/public/'.$company->owner_image);
         }
         return response()->json(['message' => 'Company and Plan created successfully!', 'data' => $company], 201);
     }
@@ -90,7 +90,7 @@ class CompanyController extends Controller
         $path = Storage::put("public/{$directory}/{$fileName}", $imageData);
         
         // Return the stored path or URL to save in the database
-        return 'storage/' .$directory.'/'.$fileName;
+        return $directory.'/'.$fileName;
     }
 
     /**

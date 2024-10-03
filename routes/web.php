@@ -25,3 +25,8 @@ Route::get('/clear-cache', function () {
     
     return "Cache and optimization cleared!";
 });
+
+Route::get('storage-link', function () {
+    Artisan::call('storage:link');
+    return 'Storage symlink created';
+});
