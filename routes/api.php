@@ -17,14 +17,22 @@ use App\Http\Controllers\Api\CompanyController;
 |
 */
 // Login Route
-Route::post('login', [LoginController::class, 'login']);
+
+
+Route::middleware('api')->group(function () {
+    Route::post('login', [LoginController::class, 'login']);
+    // other API routes
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('createcompany', [CompanyController::class, 'store']);
+    });
+});
+
+
 
 // Logout Route (requires authentication)
 Route::middleware('auth:sanctum')->post('logout', [LoginController::class, 'logout']);
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('createcompany', [CompanyController::class, 'store']);
-});
+
 
 
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
