@@ -21,4 +21,14 @@ class CompanyPlan extends Model
         'end_date',
         'status',
     ];
+
+    protected $hidden = [
+        'created_at',
+        'updated_at',
+        'deleted_at',
+    ];
+
+    public function companyPlanHistory(){
+        return $this->hasMany(CompanyPlanHistory::class, 'plan_id', 'id');
+    }
 }

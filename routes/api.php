@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\LoginController;
 use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\CompanyPlanController;
 
 
 /*
@@ -24,6 +25,8 @@ Route::middleware('api')->group(function () {
     // other API routes
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('createcompany', [CompanyController::class, 'store']);
+        Route::get('companies', [CompanyController::class, 'index']);
+        Route::post('plandetails', [CompanyPlanController::class, 'planHistory']);
     });
 });
 

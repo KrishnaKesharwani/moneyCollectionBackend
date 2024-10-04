@@ -15,6 +15,12 @@ use Illuminate\Support\Facades\Hash;
 
 class CompanyController extends Controller
 {
+
+    public function index(){
+        $company = Company::with('plans')->orderBy('id', 'desc')->get();
+        return response()->json(['data' => $company], 200);
+    }
+    
     public function store(StoreCompanyRequest $request)
     {
         // Validate the request
@@ -51,12 +57,6 @@ class CompanyController extends Controller
             }
         }
 
-        if($company){
-            $company->main_logo = url('storage/app/public/'.$company->main_logo);
-            $company->sidebar_logo = url('storage/app/public/'.$company->sidebar_logo);
-            $company->favicon_icon = url('storage/app/public/'.$company->favicon_icon);
-            $company->owner_image = url('storage/app/public/'.$company->owner_image);
-        }
         return response()->json(['message' => 'Company and Plan created successfully!', 'data' => $company], 201);
     }
 

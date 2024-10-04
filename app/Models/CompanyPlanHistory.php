@@ -17,4 +17,15 @@ class CompanyPlanHistory extends Model
         'pay_date',
         'detail'
     ];
+
+    protected $hidden = [
+        'created_at',
+        'updated_at',
+        'deleted_at',
+    ];
+
+    public function plan()
+    {
+        return $this->belongsTo(CompanyPlan::class);
+    }
 }
