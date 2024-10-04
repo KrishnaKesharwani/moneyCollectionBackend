@@ -12,15 +12,55 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class CompanyController extends Controller
 {
 
     public function index(){
         $company = Company::with('plans')->orderBy('id', 'desc')->get();
-        return response()->json(['data' => $company], 200);
+        if($company->isEmpty())
+        {
+            return response()->json(['message' => 'No companies found!'], 404);
+        }
+        else
+        {
+            return response()->json(['data' => $company], 200);
+        }
     }
-    
+
+
+    public function companyDashboard(){
+        $totalCompanies     = Company::count();
+        $runningCompanies   = DB::table('companies')
+                            ->join('company_plans', function($join){
+                                $join->on('companies.id', '=', 'company_plans.company_id')
+                                    ->where('company_plans.status', '=', 'active')
+                                    ->whereIn('company_plans.plan', ['monthly', 'yearly','six-month','three-month'])
+                                    ->where('company_plans.end_date', '>=', date('Y-m-d'));
+                            })
+                            ->where('companies.status','=','active')
+                            ->count();
+        $expiredDemo       = DB::table('companies')
+                                ->join('company_plans', function($join){
+                                    $join->on('companies.id', '=', 'company_plans.company_id')
+                                        ->whereIn('company_plans.plan', ['demo'])
+                                        ->where('company_plans.end_date', '<', date('Y-m-d'));
+                                })
+                                ->count();
+
+        $runnigDemo        = DB::table('companies')
+                                ->join('company_plans', function($join){
+                                    $join->on('companies.id', '=', 'company_plans.company_id')
+                                        ->whereIn('company_plans.plan', ['demo'])
+                                        ->where('company_plans.end_date', '>=', date('Y-m-d'));
+                                })
+                                ->where('companies.status','=','active')
+                                ->count();
+                            
+        return response()->json(['totalCompanies' => $totalCompanies, 'runningCompanies' => $runningCompanies, 'expiredDemo' => $expiredDemo, 'runnigDemo' => $runnigDemo], 200);
+    }
+
     public function store(StoreCompanyRequest $request)
     {
         // Validate the request

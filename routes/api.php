@@ -27,6 +27,7 @@ Route::middleware('api')->group(function () {
         Route::post('createcompany', [CompanyController::class, 'store']);
         Route::get('companies', [CompanyController::class, 'index']);
         Route::post('plandetails', [CompanyPlanController::class, 'planHistory']);
+        Route::get('companydashboard',[CompanyController::class, 'companyDashboard']);
     });
 });
 

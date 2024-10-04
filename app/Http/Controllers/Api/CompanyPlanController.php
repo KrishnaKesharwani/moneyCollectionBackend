@@ -19,7 +19,14 @@ class CompanyPlanController extends Controller
         ]);
 
         $CompanyPlan = CompanyPlan::where('id', $request->plan_id)->with('companyPlanHistory')->orderBy('id', 'desc')->get();
-        return response()->json(['data' => $CompanyPlan], 200);
+        if($CompanyPlan->isEmpty())
+        {
+            return response()->json(['message' => 'Plan not found'], 404);
+        }
+        else
+        {
+            return response()->json(['data' => $CompanyPlan], 200);
+        }
     }
     
 }
