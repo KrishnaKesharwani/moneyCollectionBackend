@@ -27,13 +27,21 @@ class CompanyController extends Controller
         {
             foreach ($companies as $company) {
                 // Loop through each plan for this company
+                $company->total_paid_amount = 0;
+                $company->remaining_amount  = 0;
                 foreach ($company->plans as $plan) {
                     $plan->total_paid_amount = 0;
+                    $plan->remaining_amount = 0;
                     // Add the plan's total_amount to the company's total_paid_amount
                     foreach ($plan->companyPlanHistory as $history) {
                         $plan->total_paid_amount += $history->amount;
                     }
                     $plan->remaining_amount = $plan->total_amount - $plan->total_paid_amount;
+
+                    if($plan->status=='active'){
+                        $company->total_paid_amount = $plan->total_paid_amount;
+                        $company->remaining_amount  = $plan->remaining_amount;
+                    }
                 }
             }
     

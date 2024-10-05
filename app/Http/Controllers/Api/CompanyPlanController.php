@@ -33,6 +33,15 @@ class CompanyPlanController extends Controller
         }
         else
         {
+                foreach ($CompanyPlan as $plan) {
+                    $plan->total_paid_amount = 0;
+                    $plan->remaining_amount = 0;
+                    // Add the plan's total_amount to the company's total_paid_amount
+                    foreach ($plan->companyPlanHistory as $history) {
+                        $plan->total_paid_amount += $history->amount;
+                    }
+                    $plan->remaining_amount = $plan->total_amount - $plan->total_paid_amount;
+                }
             return response()->json(['data' => $CompanyPlan], 200);
         }
     }
