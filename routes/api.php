@@ -28,6 +28,7 @@ Route::middleware('api')->group(function () {
         Route::get('companies', [CompanyController::class, 'index']);
         Route::post('plandetails', [CompanyPlanController::class, 'planHistory']);
         Route::get('companydashboard',[CompanyController::class, 'companyDashboard']);
+        Route::put('updatecompanystatus', [CompanyController::class, 'updateCompanyStatus']);
     });
 });
 

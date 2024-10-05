@@ -29,6 +29,8 @@ class CompanyController extends Controller
                 // Loop through each plan for this company
                 $company->total_paid_amount = 0;
                 $company->remaining_amount  = 0;
+                $company->start_date        = '';
+                $company->end_date          = '';
                 foreach ($company->plans as $plan) {
                     $plan->total_paid_amount = 0;
                     $plan->remaining_amount = 0;
@@ -41,6 +43,8 @@ class CompanyController extends Controller
                     if($plan->status=='active'){
                         $company->total_paid_amount = $plan->total_paid_amount;
                         $company->remaining_amount  = $plan->remaining_amount;
+                        $company->start_date        = $plan->start_date;
+                        $company->end_date          = $plan->end_date;
                     }
                 }
             }
@@ -222,5 +226,29 @@ class CompanyController extends Controller
             'email' => $request->input('company_login_id'),  // Unique identifier for user
             'password' => Hash::make($request->input('password')),  // Hash the password
         ]);        
+    }
+
+    public function updateCompanyStatus(Request $request){
+
+        $validatedData = $request->validate([
+            'company_id' => 'required',
+            'status' => 'required',
+        ]);
+
+        $company = Company::find($request->company_id);
+        $company->update(['status' => $request->status]);
+        if($company)
+        {
+            if($request->status=='active')
+            {
+                return response()->json(['message' => 'Company Activated successfully!'],200);
+            }else{
+                return response()->json(['message' => 'Company Inactived successfully!'], 200);
+            }
+        }
+        else
+        {
+            return response()->json(['message' => 'Company not found!'], 404);
+        }
     }
 }
