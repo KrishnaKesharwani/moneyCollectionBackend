@@ -40,24 +40,24 @@ class Company extends Model
     }
     public function getMainLogoAttribute($value)
     {
-        return url('storage/app/public/' . $value);
+        return !empty($value) ? url('storage/app/public/' . $value) : null;
     }
 
     // Accessor for sidebar_logo
     public function getSidebarLogoAttribute($value)
     {
-        return url('storage/app/public/' . $value);
+        return !empty($value) ? url('storage/app/public/' . $value) : null;
     }
 
     // Accessor for favicon_icon
     public function getFaviconIconAttribute($value)
     {
-        return url('storage/app/public/' . $value);
+        return !empty($value) ? url('storage/app/public/' . $value) : null;
     }
 
     // Accessor for owner_image
     public function getOwnerImageAttribute($value)
     {
-        return url('storage/app/public/' . $value);
+        return !empty($value) ? url('storage/app/public/' . $value) : null;
     }
 }

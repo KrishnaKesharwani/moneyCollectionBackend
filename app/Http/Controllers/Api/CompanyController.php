@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 
-use App\Http\Requests\StoreCompanyRequest;
+use App\Http\Requests\updateCompanyRequest;
 use App\Models\Company;
 use App\Models\CompanyPlan;
 use App\Models\User;
@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 
 class CompanyController extends Controller
 {
+
 
     public function index(){
         $companies = Company::with(['plans','plans.companyPlanHistory'])->orderBy('id', 'desc')->get();
@@ -126,6 +127,58 @@ class CompanyController extends Controller
         }
 
         return response()->json(['message' => 'Company and Plan created successfully!', 'data' => $company], 201);
+    }
+
+    public function update(updateCompanyRequest $request)
+    {
+        // Validate the request
+        $validatedData = $request->validated();
+        $company = Company::find($request->company_id);
+
+        if($company)
+        {
+            $company->company_name  = $request->company_name;
+            $company->owner_name    = $request->owner_name;
+            $company->aadhar_no     = $request->aadhar_no;
+            $company->mobile        = $request->mobile;
+            $company->status        = $request->status;
+            $company->address       = $request->address;
+            $company->details       = $request->details;
+            // Process the base64 images
+            if($request->main_logo!='')
+            {
+                $company->main_logo = $this->storeBase64Image($request->main_logo, 'logos/main');
+            }
+            if($request->sidebar_logo!='')
+            {
+                $company->sidebar_logo = $this->storeBase64Image($request->sidebar_logo, 'logos/sidebar');
+            }
+            if($request->favicon_icon!='')
+            {
+                $company->favicon_icon = $this->storeBase64Image($request->favicon_icon, 'icons/favicon');
+            }
+            if($request->owner_image!='')
+            {
+                $company->owner_image = $this->storeBase64Image($request->owner_image, 'owners');
+            }
+            // Update the company data in the database
+
+            // Check if the company was successfully created
+            if ($company->save())
+            {   
+                return response()->json(['message' => 'Company updated successfully!', 'data' => $company], 200);
+            }
+            else
+            {
+                return response()->json(['message' => 'Company not updated!'], 422);
+            }
+            
+        }
+        else
+        {
+            return response()->json(['message' => 'Company not found!'], 404);
+        }
+        
     }
 
     /**

@@ -25,6 +25,7 @@ Route::middleware('api')->group(function () {
     // other API routes
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('createcompany', [CompanyController::class, 'store']);
+        Route::post('updatecompany', [CompanyController::class, 'update']);
         Route::get('companies', [CompanyController::class, 'index']);
         Route::post('plandetails', [CompanyPlanController::class, 'planHistory']);
         Route::get('companydashboard',[CompanyController::class, 'companyDashboard']);
