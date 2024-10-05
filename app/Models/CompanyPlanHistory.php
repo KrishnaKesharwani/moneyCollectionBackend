@@ -28,4 +28,5 @@ class CompanyPlanHistory extends Model
     {
         return $this->belongsTo(CompanyPlan::class);
     }
+
 }

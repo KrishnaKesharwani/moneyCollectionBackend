@@ -18,14 +18,26 @@ class CompanyController extends Controller
 {
 
     public function index(){
-        $company = Company::with('plans')->orderBy('id', 'desc')->get();
-        if($company->isEmpty())
+        $companies = Company::with(['plans','plans.companyPlanHistory'])->orderBy('id', 'desc')->get();
+        if($companies->isEmpty())
         {
             return response()->json(['message' => 'No companies found!'], 404);
         }
         else
         {
-            return response()->json(['data' => $company], 200);
+            foreach ($companies as $company) {
+                // Loop through each plan for this company
+                foreach ($company->plans as $plan) {
+                    $plan->total_paid_amount = 0;
+                    // Add the plan's total_amount to the company's total_paid_amount
+                    foreach ($plan->companyPlanHistory as $history) {
+                        $plan->total_paid_amount += $history->amount;
+                    }
+                    $plan->remaining_amount = $plan->total_amount - $plan->total_paid_amount;
+                }
+            }
+    
+            return response()->json(['data' => $companies], 200);
         }
     }
 
@@ -37,6 +49,7 @@ class CompanyController extends Controller
                                 $join->on('companies.id', '=', 'company_plans.company_id')
                                     ->where('company_plans.status', '=', 'active')
                                     ->whereIn('company_plans.plan', ['monthly', 'yearly','six-month','three-month'])
+                                    ->orderBy('company_plans.end_date', 'desc')
                                     ->where('company_plans.end_date', '>=', date('Y-m-d'));
                             })
                             ->where('companies.status','=','active')
@@ -45,14 +58,17 @@ class CompanyController extends Controller
                                 ->join('company_plans', function($join){
                                     $join->on('companies.id', '=', 'company_plans.company_id')
                                         ->whereIn('company_plans.plan', ['demo'])
+                                        ->orderBy('company_plans.end_date', 'desc')
                                         ->where('company_plans.end_date', '<', date('Y-m-d'));
                                 })
+                                ->where('companies.status','=','active')
                                 ->count();
 
         $runnigDemo        = DB::table('companies')
                                 ->join('company_plans', function($join){
                                     $join->on('companies.id', '=', 'company_plans.company_id')
                                         ->whereIn('company_plans.plan', ['demo'])
+                                        ->orderBy('company_plans.end_date', 'desc')
                                         ->where('company_plans.end_date', '>=', date('Y-m-d'));
                                 })
                                 ->where('companies.status','=','active')

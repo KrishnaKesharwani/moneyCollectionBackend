@@ -9,9 +9,16 @@ use App\Models\CompanyPlanHistory;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use App\Repositories\CompanyPlanRepository;
 
 class CompanyPlanController extends Controller
 {
+
+    protected $companyPlanRepository;
+    public function __construct(CompanyPlanRepository $companyPlanRepository)
+    {
+        $this->companyPlanRepository = $companyPlanRepository;
+    }
 
     public function planHistory(Request $request){
         $request->validate([
@@ -19,6 +26,7 @@ class CompanyPlanController extends Controller
         ]);
 
         $CompanyPlan = CompanyPlan::where('id', $request->plan_id)->with('companyPlanHistory')->orderBy('id', 'desc')->get();
+        
         if($CompanyPlan->isEmpty())
         {
             return response()->json(['message' => 'Plan not found'], 404);
