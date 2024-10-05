@@ -22,10 +22,10 @@ class CompanyPlanController extends Controller
 
     public function planHistory(Request $request){
         $request->validate([
-            'plan_id' => 'required',
+            'company_id' => 'required',
         ]);
 
-        $CompanyPlan = CompanyPlan::where('id', $request->plan_id)->with('companyPlanHistory')->orderBy('id', 'desc')->get();
+        $CompanyPlan = CompanyPlan::where('company_id', $request->company_id)->with('companyPlanHistory')->orderBy('id', 'desc')->get();
         
         if($CompanyPlan->isEmpty())
         {
