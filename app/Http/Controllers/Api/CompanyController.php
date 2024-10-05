@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 
-use App\Http\Requests\updateCompanyRequest;
+use App\Http\Requests\UpdateCompanyRequest;
 use App\Models\Company;
 use App\Models\CompanyPlan;
 use App\Models\User;
@@ -129,7 +129,7 @@ class CompanyController extends Controller
         return response()->json(['message' => 'Company and Plan created successfully!', 'data' => $company], 201);
     }
 
-    public function update(updateCompanyRequest $request)
+    public function update(UpdateCompanyRequest $request)
     {
         // Validate the request
         $validatedData = $request->validated();
