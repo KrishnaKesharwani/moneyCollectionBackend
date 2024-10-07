@@ -294,9 +294,9 @@ class CompanyController extends Controller
         {
             if($request->status=='active')
             {
-                return response()->json(['message' => 'Company Activated successfully!'],200);
+                return response()->json(['message' => 'Company Activated successfully!','data' => $company],200);
             }else{
-                return response()->json(['message' => 'Company Inactived successfully!'], 200);
+                return response()->json(['message' => 'Company Inactived successfully!','data'=> $company], 200);
             }
         }
         else
