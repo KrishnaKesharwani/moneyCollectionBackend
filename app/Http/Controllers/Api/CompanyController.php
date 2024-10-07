@@ -43,6 +43,7 @@ class CompanyController extends Controller
                     $plan->remaining_amount = $plan->total_amount - $plan->total_paid_amount;
 
                     if($plan->status=='active'){
+                        $company->total_amount      = $plan->total_amount;
                         $company->total_paid_amount = $plan->total_paid_amount;
                         $company->remaining_amount  = $plan->remaining_amount;
                         $company->start_date        = $plan->start_date;
