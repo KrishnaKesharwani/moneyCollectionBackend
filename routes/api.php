@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\LoginController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\CompanyPlanController;
+use App\Http\Controllers\Api\CompanyPlanHistoryController;
 
 
 /*
@@ -30,6 +31,8 @@ Route::middleware('api')->group(function () {
         Route::post('plandetails', [CompanyPlanController::class, 'planHistory']);
         Route::get('companydashboard',[CompanyController::class, 'companyDashboard']);
         Route::put('updatecompanystatus', [CompanyController::class, 'updateCompanyStatus']);
+        Route::post('createplanhistory', [CompanyPlanHistoryController::class, 'store']);
+        Route::post('createplan', [CompanyPlanController::class, 'store']);
     });
 });
 

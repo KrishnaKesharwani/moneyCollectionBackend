@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 
 use App\Http\Requests\UpdateCompanyRequest;
+use App\Http\Requests\StoreCompanyRequest;
 use App\Models\Company;
 use App\Models\CompanyPlan;
 use App\Models\User;
@@ -90,6 +91,7 @@ class CompanyController extends Controller
         return response()->json(['totalCompanies' => $totalCompanies, 'runningCompanies' => $runningCompanies, 'expiredDemo' => $expiredDemo, 'runnigDemo' => $runnigDemo], 200);
     }
 
+
     public function store(StoreCompanyRequest $request)
     {
         // Validate the request
@@ -170,7 +172,7 @@ class CompanyController extends Controller
             }
             else
             {
-                return response()->json(['message' => 'Company not updated!'], 422);
+                return response()->json(['message' => 'Company not updated successfully!'], 500);
             }
             
         }
