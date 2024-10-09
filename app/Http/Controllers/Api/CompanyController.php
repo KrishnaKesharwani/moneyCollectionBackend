@@ -19,8 +19,72 @@ class CompanyController extends Controller
 {
 
 
-    public function index(){
-        $companies = Company::with(['plans','plans.companyPlanHistory'])->orderBy('id', 'desc')->get();
+    public function index(Request $request){
+
+        $upcomingExpire = $request->get('upcoming_expire', 0);
+    
+        // Get the current date
+        $now = \Carbon\Carbon::now();
+
+        if($upcomingExpire==0)
+        {
+            \Log::info('Get all companies');
+            $companies = Company::with(['plans','plans.companyPlanHistory'])->orderBy('id', 'desc')->get();
+        }
+        else
+        {
+            \Log::info('Get companies with upcoming expire');
+            $companies = Company::whereHas('plans', function($query) use ($now) {
+                $query->where('status', 'active')
+                      ->where('plan', '!=', 'demo')
+                      ->where(function ($query) use ($now) {
+                          // Clone $now before each modification
+                          $nowForMonthly = clone $now;
+                          $nowForThreeMonth = clone $now;
+                          $nowForSixMonth = clone $now;
+                          
+                          // Check for monthly plans expiring within 7 days
+                          $query->where(function ($q) use ($nowForMonthly) {
+                              $q->where('plan', 'monthly')
+                                ->whereDate('end_date', '<=', $nowForMonthly->addDays(7));
+                          })
+                          // Check for three-month plans expiring within 15 days
+                          ->orWhere(function ($q) use ($nowForThreeMonth) {
+                              $q->where('plan', 'three-month')
+                                ->whereDate('end_date', '<=', $nowForThreeMonth->addDays(15));
+                          })
+                          // Check for six-month or yearly plans expiring within 30 days
+                          ->orWhere(function ($q) use ($nowForSixMonth) {
+                              $q->whereIn('plan', ['six-month', 'yearly'])
+                                ->whereDate('end_date', '<=', $nowForSixMonth->addMonth());
+                          });
+                      });
+            })
+            ->with(['plans' => function($query) use ($now) {
+                $query->where('status', 'active')
+                      ->where('plan', '!=', 'demo')
+                      ->where(function ($query) use ($now) {
+                          $nowForMonthly = clone $now;
+                          $nowForThreeMonth = clone $now;
+                          $nowForSixMonth = clone $now;
+
+                          $query->where(function ($q) use ($nowForMonthly) {
+                              $q->where('plan', 'monthly')
+                                ->whereDate('end_date', '<=', $nowForMonthly->addDays(7));
+                          })
+                          ->orWhere(function ($q) use ($nowForThreeMonth) {
+                              $q->where('plan', 'three-month')
+                                ->whereDate('end_date', '<=', $nowForThreeMonth->addDays(15));
+                          })
+                          ->orWhere(function ($q) use ($nowForSixMonth) {
+                              $q->whereIn('plan', ['six-month', 'yearly'])
+                                ->whereDate('end_date', '<=', $nowForSixMonth->addMonth());
+                          });
+                      });
+            }, 'plans.companyPlanHistory'])
+            ->orderBy('id', 'desc')
+            ->get();
+        }
         if($companies->isEmpty())
         {
             return response()->json(['message' => 'No companies found!'], 404);
