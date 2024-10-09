@@ -50,8 +50,13 @@ class CompanyPlanController extends Controller
                     'advance_amount'    => $request->advance_amount,
                     'start_date'        => $request->start_date,
                     'end_date'          => $request->end_date,
-                    'status'            => 'active',
+                    'status'            => 'pending',
                 ];
+
+                if(date('Y-m-d',strtotime($request->start_date)) == date('Y-m-d'))
+                {
+                    $postData['status'] = 'active';
+                }
 
                 if($request->advance_amount < $request->total_amount){
                     $postData['full_paid'] = 0;

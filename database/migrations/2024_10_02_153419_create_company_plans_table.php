@@ -20,7 +20,7 @@ return new class extends Migration
             $table->integer('full_paid')->default(0)->comment('1 = yes, 0 = no');
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
-            $table->enum('status', ['active', 'inactive']);
+            $table->enum('status', ['active', 'inactive','pending']);
             $table->softDeletes();
             $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
             $table->timestamps();
