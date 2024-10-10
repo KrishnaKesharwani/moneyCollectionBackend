@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 
-use App\Http\Requests\UpdateCompanyRequest;
-use App\Http\Requests\StoreCompanyRequest;
 use App\Models\Company;
 use App\Models\CompanyPlan;
 use App\Models\User;
@@ -14,6 +12,8 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class CompanyController extends Controller
 {
@@ -24,16 +24,14 @@ class CompanyController extends Controller
         $upcomingExpire = $request->get('upcoming_expire', 0);
     
         // Get the current date
-        $now = \Carbon\Carbon::now();
-
+        $now = Carbon::now();
+        
         if($upcomingExpire==0)
         {
-            \Log::info('Get all companies');
             $companies = Company::with(['plans','plans.companyPlanHistory'])->orderBy('id', 'desc')->get();
         }
         else
         {
-            \Log::info('Get companies with upcoming expire');
             $companies = Company::whereHas('plans', function($query) use ($now) {
                 $query->where('status', 'active')
                       ->where('plan', '!=', 'demo')
@@ -87,7 +85,7 @@ class CompanyController extends Controller
         }
         if($companies->isEmpty())
         {
-            return response()->json(['message' => 'No companies found!'], 404);
+            return sendErrorResponse('No companies found!', 404);
         }
         else
         {
@@ -115,8 +113,8 @@ class CompanyController extends Controller
                     }
                 }
             }
-    
-            return response()->json(['data' => $companies], 200);
+            
+            return sendSuccessResponse('Companies found successfully!', 200, $companies);
         }
     }
 
@@ -152,19 +150,45 @@ class CompanyController extends Controller
                                 })
                                 ->where('companies.status','=','active')
                                 ->count();
-                            
-        return response()->json(['totalCompanies' => $totalCompanies, 'runningCompanies' => $runningCompanies, 'expiredDemo' => $expiredDemo, 'runnigDemo' => $runnigDemo], 200);
+        return sendSuccessResponse('Dashboard Counts', 200, ['totalCompanies' => $totalCompanies, 'runningCompanies' => $runningCompanies, 'expiredDemo' => $expiredDemo, 'runnigDemo' => $runnigDemo]);
     }
 
 
-    public function store(StoreCompanyRequest $request)
+    public function store(Request $request)
     {
         // Validate the request
-        $validatedData = $request->validated();
+
+        $validator = Validator::make($request->all(), [
+            'company_name' => 'required|string',
+            'owner_name' => 'required|string',
+            'mobile' => 'required|digits_between:10,15',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date',
+            'aadhar_no' => 'nullable|string',
+            'plan' => 'required|string',
+            'total_amount' => 'required|numeric',
+            'advance_amount' => 'required|numeric',
+            'status' => 'required|string',
+            'main_logo' => 'nullable|string',
+            'sidebar_logo' => 'nullable|string',
+            'favicon_icon' => 'nullable|string',
+            'owner_image' => 'nullable|string',
+            'address' => 'nullable|string|max:500',
+            'details' => 'nullable|string|max:500',
+            'company_login_id' => 'required|email',
+            'password' => 'required|string|min:6',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $validatedData = $request->all();
         
         $checkUser  = User::where('email', $request->company_login_id)->count();
         if($checkUser > 0){
-            return response()->json(['message' => 'Company already exists!'], 409);
+            return sendErrorResponse('Company already exists!', 409, $checkUser);
         }
         // Process the base64 images
         $validatedData['main_logo']     = $this->storeBase64Image($request->main_logo, 'logos/main');
@@ -186,20 +210,39 @@ class CompanyController extends Controller
 
             if($companyPlan)
             {
-                \Log::info('Company and Plan created successfully!');
                 // Create the plan history after the plan is created
-                $this->createCompanyPlanHistory($companyPlan, $request);
-                
+                $this->createCompanyPlanHistory($companyPlan, $request);       
             }
         }
 
-        return response()->json(['message' => 'Company and Plan created successfully!', 'data' => $company], 201);
+        return sendSuccessResponse('Company created successfully!', 201, $company);
     }
 
-    public function update(UpdateCompanyRequest $request)
+    public function update(Request $request)
     {
+
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required',
+            'company_name' => 'required|string',
+            'owner_name' => 'required|string',
+            'mobile' => 'required|digits_between:10,15',
+            'aadhar_no' => 'nullable|string',
+            'status' => 'required|string',
+            'main_logo' => 'nullable|string',
+            'sidebar_logo' => 'nullable|string',
+            'favicon_icon' => 'nullable|string',
+            'owner_image' => 'nullable|string',
+            'address' => 'nullable|string|max:500',
+            'details' => 'nullable|string|max:500',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
         // Validate the request
-        $validatedData = $request->validated();
+        $validatedData = $request->all();
         $company = Company::find($request->company_id);
 
         if($company)
@@ -233,17 +276,17 @@ class CompanyController extends Controller
             // Check if the company was successfully created
             if ($company->save())
             {   
-                return response()->json(['message' => 'Company updated successfully!', 'data' => $company], 200);
+                return sendSuccessResponse('Company updated successfully!', 200, $company);
             }
             else
             {
-                return response()->json(['message' => 'Company not updated successfully!'], 500);
+                return sendErrorResponse('Company not updated successfully!', 500);
             }
             
         }
         else
         {
-            return response()->json(['message' => 'Company not found!'], 404);
+            return sendErrorResponse('Company not found!', 404);
         }
         
     }
@@ -350,10 +393,15 @@ class CompanyController extends Controller
 
     public function updateCompanyStatus(Request $request){
 
-        $validatedData = $request->validate([
+        $validator = Validator::make($request->all(), [
             'company_id' => 'required',
             'status' => 'required',
         ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
 
         $company = Company::find($request->company_id);
         $company->update(['status' => $request->status]);
@@ -361,14 +409,14 @@ class CompanyController extends Controller
         {
             if($request->status=='active')
             {
-                return response()->json(['message' => 'Company Activated successfully!','data' => $company],200);
+                return sendSuccessResponse('Company Activated successfully!',200,$company);
             }else{
-                return response()->json(['message' => 'Company Inactived successfully!','data'=> $company], 200);
+                return sendSuccessResponse('Company Inactived successfully!',200,$company);
             }
         }
         else
         {
-            return response()->json(['message' => 'Company not found!'], 404);
+            return sendErrorResponse('Company not found!', 404);
         }
     }
 }

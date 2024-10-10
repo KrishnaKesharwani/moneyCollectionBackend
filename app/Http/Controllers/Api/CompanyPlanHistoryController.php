@@ -8,7 +8,7 @@ use App\Models\CompanyPlanHistory;
 use Illuminate\Http\Request;
 use App\Repositories\CompanyPlanRepository;
 use App\Repositories\CompanyPlanHistoryRepository;
-use App\Http\Requests\StoreCompanyPlanHistoryRequest;
+use Illuminate\Support\Facades\Validator;
 
 class CompanyPlanHistoryController extends Controller
 {
@@ -25,21 +25,31 @@ class CompanyPlanHistoryController extends Controller
     }
 
 
-    public function store(StoreCompanyPlanHistoryRequest $request){
+    public function store(Request $request){
 
         // Validate the request
-        $validatedData = $request->validated();
+        $validator = Validator::make($request->all(), [
+            'plan_id' => 'required',
+            'amount' => 'required',
+            'received_date' => 'required|date',
+            'detail' => 'required',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
 
         $plan = $this->companyPlanRepository->find($request->plan_id);
         if(!$plan){
-            return response()->json(['message' => 'Plan not found'], 404);
+            return sendErrorResponse('Plan not found', 404);
         }else{
             $totalPaidAmount = $this->companyPlanHistoryRepository->getTotalPaidAmount($plan->id);
             $remainingAmount = $plan->total_amount - $totalPaidAmount;
 
             if($request->amount>$remainingAmount)
             {
-                return response()->json(['message' => 'Amount is greater than remaining amount!'], 422);
+                return sendErrorResponse('Amount is greater than remaining amount!', 422);
             }
             else
             {
@@ -59,11 +69,11 @@ class CompanyPlanHistoryController extends Controller
             
             if($planHistory)
             {
-                return response()->json(['message' => 'Plan History created successfully!','data' => $planHistory], 201);
+                return sendSuccessResponse('Plan History created successfully!', 201, $planHistory);
             }
             else
             {
-                return response()->json(['message' => 'Plan History not created!'], 500);
+                return sendErrorResponse('Plan History not created!', 500);
             }
         }
     }

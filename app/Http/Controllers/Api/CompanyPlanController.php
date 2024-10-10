@@ -11,9 +11,10 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Repositories\CompanyPlanRepository;
 use App\Repositories\CompanyRepository;
-use App\Http\Requests\StoreCompanyPlanRequest;
 use App\Repositories\CompanyPlanHistoryRepository;
+use Illuminate\Support\Facades\Validator;
 use exception;
+use Carbon\Carbon;
 
 class CompanyPlanController extends Controller
 {
@@ -33,27 +34,50 @@ class CompanyPlanController extends Controller
     }
 
 
-    public function store(StoreCompanyPlanRequest $request){
-        $validatedData = $request->validated();
+    public function store(Request $request){
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required',
+            'plan' => 'required|string',
+            'total_amount' => 'required|numeric',
+            'advance_amount' => 'required|numeric',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date',
+            'detail' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
         try{
             $company = $this->companyRepository->find($request->company_id);
             if(!$company)
             {
-                return response()->json(['message' => 'Company not found'], 404);
+                return sendErrorResponse('Company not found', 404);
+
             }
             else
             {
+                $startDate = Carbon::parse($request->start_date)->format('Y-m-d');
+                $endDate = Carbon::parse($request->end_date)->format('Y-m-d');
+                $checkExistingPlan = $this->companyPlanRepository->checkExistingActivePlan($request->company_id, $startDate);
+                if($checkExistingPlan)
+                {
+                    $error = 'A active plan already exists on this date for this company please create new plan after this date ='.$checkExistingPlan->end_date;
+                    return sendErrorResponse($error, 409);
+                }
+
                 $postData = [
                     'company_id'        => $request->company_id, 
                     'plan'              => $request->plan,
                     'total_amount'      => $request->total_amount,
                     'advance_amount'    => $request->advance_amount,
-                    'start_date'        => $request->start_date,
-                    'end_date'          => $request->end_date,
+                    'start_date'        => $startDate,
+                    'end_date'          => $endDate,
                     'status'            => 'pending',
                 ];
 
-                if(date('Y-m-d',strtotime($request->start_date)) == date('Y-m-d'))
+                if(Carbon::parse($request->start_date)->isToday())
                 {
                     $postData['status'] = 'active';
                 }
@@ -72,39 +96,43 @@ class CompanyPlanController extends Controller
                     $planHistory = $this->companyPlanHistoryRepository->create([
                         'plan_id' => $plan->id,
                         'amount' => $request->advance_amount,
-                        'pay_date' => $request->start_date,
+                        'pay_date' =>$startDate,
                         'detail' => $request->detail,
                     ]);
 
                     if(!$planHistory){
-                        return response()->json(['message' => 'Plan history not created!'], 500);
+                        return sendErrorResponse('Plan history not created!', 500);
                     }
-                    
-                    return response()->json(['message' => 'Plan created successfully!','data' => $plan], 201);
+
+                    return sendSuccessResponse('Plan created successfully!', 201, $plan);
                 }
                 else
                 {
-                    return response()->json(['message' => 'Plan not created!'], 500);
+                    return sendErrorResponse('Plan not created!', 500);
                 }
             }
         }
         catch(exception $e)
         {
-            return response()->json(['message' => $e->getMessage()], 500);
+            return sendErrorResponse($e->getMessage(), 500);
         }
         
     }
 
     public function planHistory(Request $request){
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'company_id' => 'required',
         ]);
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
 
         $CompanyPlan = CompanyPlan::where('company_id', $request->company_id)->with('companyPlanHistory')->orderBy('id', 'desc')->get();
         
         if($CompanyPlan->isEmpty())
         {
-            return response()->json(['message' => 'Plan not found'], 404);
+            return sendErrorResponse('Plan not found', 404);
         }
         else
         {
@@ -117,7 +145,7 @@ class CompanyPlanController extends Controller
                     }
                     $plan->remaining_amount = $plan->total_amount - $plan->total_paid_amount;
                 }
-            return response()->json(['data' => $CompanyPlan], 200);
+            return sendSuccessResponse('Plan found successfully!', 200, $CompanyPlan);
         }
     }    
 }

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Support\Facades\Validator;
 
 
 class LoginController extends Controller
@@ -16,29 +17,30 @@ class LoginController extends Controller
      */
     public function login(Request $request)
     {
-        // Validate the request data
-        $request->validate([
+
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
         ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
 
         // Attempt to find the user
         $user = User::where('email', $request->email)->first();
 
         // Check if the user exists and if the password is correct
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['error' => 'Invalid credentials'], 401);
+            return sendErrorResponse('Invalid credentials', 401);
         }
 
         // Generate a new API token for the user
         $token = $user->createToken('API Token')->plainTextToken;
 
         // Return the token and user data
-        return response()->json([
-            'message' => 'Login successful',
-            'user' => $user,
-            'token' => $token,
-        ]);
+        return sendSuccessResponse('Login successful',200, $user, $token);
     }
 
     /**
