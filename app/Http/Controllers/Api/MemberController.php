@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 
 use App\Models\User;
+use App\Models\Member;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -195,15 +196,17 @@ class MemberController extends Controller
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
-        $member = $this->memberRepository->find($request->member_id);
-        $member->update(['status' => $request->status]);
+        $member = Member::find($request->member_id);
         if($member)
         {
+            $member->status = $request->status;
+            $member->save();
+            $membarData = $this->memberRepository->getById($member->id);
             if($request->status=='active')
             {
-                return sendSuccessResponse('Member Activated successfully!',200,$company);
+                return sendSuccessResponse('Member Activated successfully!',200,$membarData);
             }else{
-                return sendSuccessResponse('Member Inactived successfully!',200,$company);
+                return sendSuccessResponse('Member Inactived successfully!',200,$membarData);
             }
         }
         else

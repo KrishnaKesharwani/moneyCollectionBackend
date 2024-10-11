@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Models\Company;
 use Illuminate\Support\Facades\Validator;
 
 
@@ -39,8 +40,9 @@ class LoginController extends Controller
         // Generate a new API token for the user
         $token = $user->createToken('API Token')->plainTextToken;
 
+        $userData = User::with('company')->where('id', $user->id)->first();
         // Return the token and user data
-        return sendSuccessResponse('Login successful',200, $user, $token);
+        return sendSuccessResponse('Login successful',200, $userData, $token);
     }
 
     /**
