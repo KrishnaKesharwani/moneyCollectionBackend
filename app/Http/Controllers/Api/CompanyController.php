@@ -190,11 +190,18 @@ class CompanyController extends Controller
         if($checkUser > 0){
             return sendErrorResponse('Company already exists!', 409, $checkUser);
         }
+
+        //create company user after the company is created
+
+        $user = $this->createUser($request);
+        
+
         // Process the base64 images
         $validatedData['main_logo']     = $this->storeBase64Image($request->main_logo, 'logos/main');
         $validatedData['sidebar_logo']  = $this->storeBase64Image($request->sidebar_logo, 'logos/sidebar');
         $validatedData['favicon_icon']  = $this->storeBase64Image($request->favicon_icon, 'icons/favicon');
         $validatedData['owner_image']   = $this->storeBase64Image($request->owner_image, 'owners');
+        $validatedData['user_id']       = $user->id;
 
         // Store the company data in the database
         $company = Company::create($validatedData);
@@ -202,9 +209,6 @@ class CompanyController extends Controller
         // Check if the company was successfully created
         if ($company)
         {   
-            //create company user after the company is created
-
-            $this->createUser($company, $request);
             // Create the company plan after the company is created
             $companyPlan = $this->createCompanyPlan($company, $request);
 
@@ -379,11 +383,10 @@ class CompanyController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \App\Models\User
      */
-    private function createUser(Company $company, Request $request)
+    private function createUser(Request $request)
     {
         // Create the plan history based on the company plan
         return User::create([
-            'company_id' => $company->id,  // Associate with the company
             'name' => $request->input('owner_name'),
             'user_type' => 1,  // 1 for company
             'email' => $request->input('company_login_id'),  // Unique identifier for user

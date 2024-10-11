@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('companies', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('user_id');
             $table->string('company_name');
             $table->string('owner_name');
             $table->string('mobile')->nullable();
@@ -31,6 +32,7 @@ return new class extends Migration
             $table->timestamps();
             // Add soft deletes
             $table->softDeletes();
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 
