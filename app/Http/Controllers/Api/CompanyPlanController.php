@@ -22,6 +22,7 @@ class CompanyPlanController extends Controller
     protected $companyPlanRepository;
     protected $companyPlanHistoryRepository;
 
+
     public function __construct(
         CompanyRepository $companyRepository,
         CompanyPlanRepository $companyPlanRepository,
@@ -116,7 +117,6 @@ class CompanyPlanController extends Controller
         {
             return sendErrorResponse($e->getMessage(), 500);
         }
-        
     }
 
     public function planHistory(Request $request){

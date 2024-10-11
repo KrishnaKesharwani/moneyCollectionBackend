@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\CompanyPlanController;
 use App\Http\Controllers\Api\CompanyPlanHistoryController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\MemberController;
 
 
 /*
@@ -34,6 +35,9 @@ Route::middleware('api')->group(function () {
         Route::put('updatecompanystatus', [CompanyController::class, 'updateCompanyStatus']);
         Route::post('createplanhistory', [CompanyPlanHistoryController::class, 'store']);
         Route::post('createplan', [CompanyPlanController::class, 'store']);
+
+        //Member
+        Route::post('createmember', [MemberController::class, 'store']);
 
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);

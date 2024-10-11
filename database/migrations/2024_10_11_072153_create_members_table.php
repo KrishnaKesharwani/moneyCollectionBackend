@@ -11,29 +11,24 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('companies', function (Blueprint $table) {
+        Schema::create('members', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
-            $table->string('company_name');
-            $table->string('owner_name');
+            $table->unsignedBigInteger('company_id');
+            $table->string('member_no');
+            $table->string('name');
             $table->string('mobile')->nullable();
-            $table->date('start_date');
-            $table->date('end_date');
+            $table->string('email')->unique();
+            $table->date('join_date');
             $table->string('aadhar_no')->nullable();
-            $table->decimal('total_amount', 15, 2)->default(0);
-            $table->decimal('advance_amount', 15, 2)->default(0);
-            $table->enum('status', ['active', 'inactive']);
-            $table->string('main_logo')->nullable();
-            $table->string('sidebar_logo')->nullable();
-            $table->string('favicon_icon')->nullable();
-            $table->string('owner_image')->nullable();
+            $table->string('image')->nullable();
             $table->text('address')->nullable();
-            $table->text('details')->nullable();
-            $table->int('member_count')->default(0);
+            $table->enum('status', ['active', 'inactive']);
             $table->timestamps();
             // Add soft deletes
             $table->softDeletes();
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
         });
     }
 
@@ -42,6 +37,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('companies');
+        Schema::dropIfExists('members');
     }
 };
