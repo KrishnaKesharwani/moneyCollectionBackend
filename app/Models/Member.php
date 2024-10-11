@@ -35,4 +35,9 @@ class Member extends Model
     {
         return !empty($value) ? url('storage/app/public/' . $value) : null;
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }

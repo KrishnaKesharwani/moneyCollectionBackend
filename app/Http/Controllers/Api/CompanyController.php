@@ -391,6 +391,7 @@ class CompanyController extends Controller
             'user_type' => 1,  // 1 for company
             'email' => $request->input('company_login_id'),  // Unique identifier for user
             'password' => Hash::make($request->input('password')),  // Hash the password
+            'password_hint' => $request->input('password'),
         ]);        
     }
 

@@ -38,6 +38,9 @@ Route::middleware('api')->group(function () {
 
         //Member
         Route::post('createmember', [MemberController::class, 'store']);
+        //Route::post('updatemember', [MemberController::class, 'update']);
+        Route::post('members', [MemberController::class, 'index']);
+        //Route::post('updatememberstatus', [MemberController::class, 'updateMemberStatus']);
 
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);

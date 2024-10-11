@@ -12,4 +12,13 @@ class MemberRepository extends BaseRepository
     }
     
     // You can add any specific methods related to User here
+
+    public function getById($member_id)
+    {
+        return $this->model->with('user')->where('id', $member_id)->get();
+    }
+
+    public function getAllMembers($company_id){
+        return $this->model->with('user')->where('company_id', $company_id)->get();
+    }
 }

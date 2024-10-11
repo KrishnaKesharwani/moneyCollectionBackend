@@ -23,6 +23,7 @@ class User extends Authenticatable
         'company_id',
         'user_type',
         'password',
+        'password_hint',
     ];
 
     /**

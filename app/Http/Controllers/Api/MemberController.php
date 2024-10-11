@@ -30,6 +30,33 @@ class MemberController extends Controller
         $this->memberRepository         = $memberRepository;
     }
 
+    public function index(Request $request){
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            $members = $this->memberRepository->getAllMembers($request->company_id);
+
+            if($members->isEmpty())
+            {
+                return sendErrorResponse('Members not found!', 404);
+            }
+            else
+            {
+                return sendSuccessResponse('Members found successfully!', 200, $members);
+            }
+        }
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
+
     public function store(Request $request)
     {
         // Validate the request
@@ -38,7 +65,7 @@ class MemberController extends Controller
             'company_id' => 'required',
             'name'  => 'required',
             'mobile' => 'required|digits_between:10,15',
-            'email'  => 'required|email',
+            'email'  => 'required|email|same:member_login_id',
             'join_date' => 'required|date',
             'aadhar_no' => 'nullable|string',
             'image' => 'nullable|string',
@@ -55,45 +82,51 @@ class MemberController extends Controller
 
         $validatedData = $request->all();
         
-        $company = $this->companyRepository->find($request->company_id);
-        $member_no = 0;
-        if(!$company)
-        {
-            return sendErrorResponse('Company not found!', 404);
+        try {
+            $company = $this->companyRepository->find($request->company_id);
+            $member_no = 0;
+            if(!$company)
+            {
+                return sendErrorResponse('Company not found!', 404);
+            }
+            else
+            {
+                $companyName            = $company->company_name;
+                $companyprefix          = explode(' ', $companyName)[0];
+                $member_no              = $companyprefix.'-'.$company->id.'-'.$company->member_count + 1;
+                $company->member_count  = $company->member_count + 1;
+                $company->save();
+            }
+
+            $checkUser  = User::where('email', $request->member_login_id)->count();
+            if($checkUser > 0){
+                return sendErrorResponse('Email already exists!', 409, $checkUser);
+            }
+
+            //create user for member
+
+            $user = $this->createUser($request);
+            // Process the base64 images
+            $validatedData['image']     = $this->storeBase64Image($request->image, 'member');
+            $validatedData['user_id']   = $user->id;
+            $validatedData['member_no'] = $member_no;
+
+            // Store the company data in the database
+            $member = $this->memberRepository->create($validatedData);
+
+            // Check if the company was successfully created
+            if ($member)
+            {   
+                $memberData = $this->memberRepository->getById($member->id);
+                return sendSuccessResponse('Member created successfully!', 201, $memberData);
+            }
+            else
+            {
+                return sendErrorResponse('Member not created!', 404);
+            }
         }
-        else
-        {
-            $companyName            = $company->company_name;
-            $companyprefix          = explode(' ', $companyName)[0];
-            $member_no              = $companyprefix.'-'.$company->id.'-'.$company->member_count + 1;
-            $company->member_count  = $company->member_count + 1;
-            $company->save();
-        }
-
-        $checkUser  = User::where('email', $request->member_login_id)->count();
-        if($checkUser > 0){
-            return sendErrorResponse('Email already exists!', 409, $checkUser);
-        }
-
-        //create user for member
-
-        $user = $this->createUser($request);
-        // Process the base64 images
-        $validatedData['image']     = $this->storeBase64Image($request->image, 'member');
-        $validatedData['user_id']   = $user->id;
-        $validatedData['member_no'] = $member_no;
-
-        // Store the company data in the database
-        $member = $this->memberRepository->create($validatedData);
-
-        // Check if the company was successfully created
-        if ($member)
-        {   
-            return sendSuccessResponse('Member created successfully!', 201, $member);
-        }
-        else
-        {
-            return sendErrorResponse('Member not created!', 404);
+        catch (Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
         }
     }
 
@@ -146,6 +179,7 @@ class MemberController extends Controller
             'user_type' => 2,  // 1 for company
             'email' => $request->input('member_login_id'),  // Unique identifier for user
             'password' => Hash::make($request->input('password')),  // Hash the password
+            'password_hint' => $request->input('password'),
         ]);        
     }
 
