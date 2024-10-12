@@ -15,7 +15,7 @@ class MemberRepository extends BaseRepository
 
     public function getById($member_id)
     {
-        return $this->model->with('user')->where('id', $member_id)->get();
+        return $this->model->with('user')->where('id', $member_id)->first();
     }
 
     public function getAllMembers($company_id){

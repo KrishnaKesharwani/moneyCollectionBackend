@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('members', function (Blueprint $table) {
+        Schema::create('customers', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id')->default(0);
             $table->unsignedBigInteger('company_id');
-            $table->string('member_no');
+            $table->string('customer_no');
             $table->string('name');
             $table->string('mobile')->nullable();
             $table->string('email')->unique();
@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('aadhar_no')->nullable();
             $table->string('image')->nullable();
             $table->text('address')->nullable();
+            $table->integer('created_by')->default(0);
             $table->enum('status', ['active', 'inactive']);
             $table->timestamps();
             // Add soft deletes
@@ -37,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('members');
+        Schema::dropIfExists('customers');
     }
 };

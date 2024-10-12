@@ -4,31 +4,32 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 
 use App\Models\User;
-use App\Models\Member;
+use App\Models\Customer;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use App\Repositories\MemberRepository;
+use App\Repositories\CustomerRepository;
 use App\Repositories\CompanyRepository;
 use Carbon\Carbon;
 use exception;
+use Auth;
 
-class MemberController extends Controller
+class CustomerController extends Controller
 {
 
 
-    protected $memberRepository;
+    protected $customerRepository;
     protected $companyRepository;
 
     public function __construct(
         CompanyRepository $companyRepository,
-        MemberRepository $memberRepository,
+        customerRepository $customerRepository,
         )
     {
         $this->companyRepository        = $companyRepository;
-        $this->memberRepository         = $memberRepository;
+        $this->customerRepository         = $customerRepository;
     }
 
     public function index(Request $request){
@@ -42,15 +43,15 @@ class MemberController extends Controller
         }
 
         try{
-            $members = $this->memberRepository->getAllMembers($request->company_id);
+            $customers = $this->customerRepository->getAllCustomers($request->company_id);
 
-            if($members->isEmpty())
+            if($customers->isEmpty())
             {
-                return sendErrorResponse('Members not found!', 404);
+                return sendErrorResponse('Customers not found!', 404);
             }
             else
             {
-                return sendSuccessResponse('Members found successfully!', 200, $members);
+                return sendSuccessResponse('Customers found successfully!', 200, $customers);
             }
         }
         catch (\Exception $e) {
@@ -72,7 +73,7 @@ class MemberController extends Controller
             'image' => 'nullable|string',
             'status' => 'required|string',
             'address' => 'nullable|string|max:500',
-            'member_login_id' => 'required|email',
+            'customer_login_id' => 'required|email',
             'password' => 'required|string|min:6',
         ]);
         
@@ -85,27 +86,25 @@ class MemberController extends Controller
         
         try {
             $company = $this->companyRepository->find($request->company_id);
-            $member_no = 0;
+            $customer_no = 0;
             if(!$company)
             {
                 return sendErrorResponse('Company not found!', 404);
             }
             else
             {
-                $companyName            = $company->company_name;
-                $companyprefix          = explode(' ', $companyName)[0];
-                $member_no              = $companyprefix.'-'.$company->id.'-'.$company->member_count + 1;
-                $company->member_count  = $company->member_count + 1;
-                $company->save();
+                $companyName                = $company->company_name;
+                $companyprefix              = explode(' ', $companyName)[0];
+                $customer_no                = $companyprefix.'-cus-'.$company->id.'-'.$company->customer_count + 1;
             }
 
-            $checkUser = User::where('email', $request->member_login_id)
+            $checkUser = User::where('email', $request->customer_login_id)
                 ->orWhere('mobile', $request->mobile)
                 ->first();
 
             if ($checkUser)
             {
-                if ($checkUser->email === $request->member_login_id) 
+                if ($checkUser->email === $request->customer_login_id) 
                 {
                     return sendErrorResponse('Email already exists!', 409);
                 }
@@ -116,39 +115,39 @@ class MemberController extends Controller
                 }
             }
 
-
-            //create user for member
-
             // Process the base64 images
-            $validatedData['image']     = $this->storeBase64Image($request->image, 'member');
-            //$validatedData['user_id']   = $user->id;
-            $validatedData['member_no'] = $member_no;
-            $cleanTimeString            = preg_replace('/\s*\(.*\)$/', '', $request->join_date);
-            $validatedData['join_date'] = Carbon::parse($cleanTimeString)->format('Y-m-d');
+            $validatedData['image']         = $this->storeBase64Image($request->image, 'customer');
+            $validatedData['customer_no']   = $customer_no;
+            $validatedData['created_by']    = Auth::user()->id;
+            $cleanTimeString                = preg_replace('/\s*\(.*\)$/', '', $request->join_date);
+            $validatedData['join_date']     = Carbon::parse($cleanTimeString)->format('Y-m-d');
 
+            $user = $this->createUser($request);
+            if($user){
+                $validatedData['user_id'] = $user->id;
+            }
             // Store the company data in the database
-            $member = $this->memberRepository->create($validatedData);
+            $customer = $this->customerRepository->create($validatedData);
 
             // Check if the company was successfully created
-            if ($member)
-            {   
-                $user = $this->createUser($request);
-                if($user)
-                {
-                    $member->user_id = $user->id;
-                    $member->save();
-                }
+            if ($customer)
+            { 
+                //update customer count 
+                $company->customer_count    = $company->customer_count + 1;
+                $company->save();
 
-                $memberData = $this->memberRepository->getById($member->id);
-                return sendSuccessResponse('Member created successfully!', 201, $memberData);
+                $customerData = $this->customerRepository->getById($customer->id);
+                return sendSuccessResponse('Customer created successfully!', 201, $customerData);
             }
             else
             {
-                return sendErrorResponse('Member not created!', 404);
+                // delete user if customer not created
+                User::where('email', $request->customer_login_id)->delete();
+                return sendErrorResponse('Customer not created!', 404);
             }
         }
         catch (Exception $e) {
-            return sendErrorResponse($e->getMessage(), 500);
+            return sendErrorResponse($e->getMessage().'at line number '.$e->getLine(), 500);
         }
     }
 
@@ -158,7 +157,7 @@ class MemberController extends Controller
 
         $validator = Validator::make($request->all(), [
             'company_id' => 'required',
-            'member_id' => 'required',
+            'customer_id' => 'required',
             'name'  => 'required',
             'mobile' => 'required|digits_between:10,15',
             'email'  => 'required|email',
@@ -182,15 +181,15 @@ class MemberController extends Controller
                 return sendErrorResponse('Company not found!', 404);
             }
 
-            $member         = $this->memberRepository->checkMemberExist($request->company_id, $request->member_id);
-            if(!$member)
+            $customer         = $this->customerRepository->checkCustomerExist($request->company_id, $request->customer_id);
+            if(!$customer)
             {
-                return sendErrorResponse('Member not found!', 404);
+                return sendErrorResponse('Customer not found!', 404);
             }
 
-            $memberUserId   = $member->user_id;
+            $customerUserId   = $customer->user_id;
 
-            $checkUserMobile = User::where('id', '!=', $memberUserId)->where('mobile', $request->mobile)->count();
+            $checkUserMobile = User::where('id', '!=', $customerUserId)->where('mobile', $request->mobile)->count();
             
             if($checkUserMobile>0){
                 return sendErrorResponse('Mobile already exists!', 409);
@@ -198,27 +197,27 @@ class MemberController extends Controller
 
             // Process the base64 images
             if($request->image!=''){
-                $validatedData['image']     = $this->storeBase64Image($request->image, 'member');
+                $validatedData['image']     = $this->storeBase64Image($request->image, 'customer');
             }
 
             $cleanTimeString            = preg_replace('/\s*\(.*\)$/', '', $request->join_date);
             $validatedData['join_date'] = Carbon::parse($cleanTimeString)->format('Y-m-d');
 
-            // Update the company data in the database
-            $member = $this->memberRepository->update($request->member_id,$validatedData);
+            // update the customer data in the database
+            $customer = $this->customerRepository->update($request->customer_id,$validatedData);
 
             // Check if the company was successfully created
-            if ($member)
+            if ($customer)
             {   
                 // update mobile number in user table
-                User::where('id', $memberUserId)->update(['mobile' => $request->mobile]);
+                User::where('id', $customerUserId)->update(['mobile' => $request->mobile]);
 
-                $memberData = $this->memberRepository->getById($member->id);
-                return sendSuccessResponse('Member Updated successfully!', 201, $memberData);
+                $customerData = $this->customerRepository->getById($customer->id);
+                return sendSuccessResponse('Customer Updated successfully!', 201, $customerData);
             }
             else
             {
-                return sendErrorResponse('Member not created!', 404);
+                return sendErrorResponse('Customer not created!', 404);
             }
         }
         catch (Exception $e) {
@@ -272,18 +271,18 @@ class MemberController extends Controller
         // Create the plan history based on the company plan
         return User::create([
             'name' => $request->input('name'),
-            'user_type' => 2,  // 1 for company
-            'email' => $request->input('member_login_id'),  // Unique identifier for user
+            'user_type' => 3,  // 3 for customer
+            'email' => $request->input('customer_login_id'),  // Unique identifier for user
             'password' => Hash::make($request->input('password')),  // Hash the password
             'password_hint' => $request->input('password'),
             'mobile' => $request->input('mobile'),
         ]);        
     }
 
-    public function updateMemberStatus(Request $request){
+    public function updateCustomerStatus(Request $request){
 
         $validator = Validator::make($request->all(), [
-            'member_id' => 'required',
+            'customer_id' => 'required',
             'status' => 'required',
         ]);
         
@@ -292,22 +291,22 @@ class MemberController extends Controller
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
-        $member = Member::find($request->member_id);
-        if($member)
+        $customer = Customer::find($request->customer_id);
+        if($customer)
         {
-            $member->status = $request->status;
-            $member->save();
-            $membarData = $this->memberRepository->getById($member->id);
+            $customer->status = $request->status;
+            $customer->save();
+            $customerData = $this->customerRepository->getById($customer->id);
             if($request->status=='active')
             {
-                return sendSuccessResponse('Member Activated successfully!',200,$membarData);
+                return sendSuccessResponse('Customer Activated successfully!',200,$customerData);
             }else{
-                return sendSuccessResponse('Member Inactived successfully!',200,$membarData);
+                return sendSuccessResponse('Customer Inactived successfully!',200,$customerData);
             }
         }
         else
         {
-            return sendErrorResponse('Member not found!', 404);
+            return sendErrorResponse('Customer not found!', 404);
         }
     }
 }

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CompanyPlanController;
 use App\Http\Controllers\Api\CompanyPlanHistoryController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\MemberController;
+use App\Http\Controllers\Api\CustomerController;
 
 
 /*
@@ -41,6 +42,12 @@ Route::middleware('api')->group(function () {
         Route::post('updatemember', [MemberController::class, 'update']);
         Route::post('members', [MemberController::class, 'index']);
         Route::put('updatememberstatus', [MemberController::class, 'updateMemberStatus']);
+
+        //customer
+        Route::post('createcustomer', [CustomerController::class, 'store']);
+        Route::post('updatecustomer', [CustomerController::class, 'update']);
+        Route::post('customers', [CustomerController::class, 'index']);
+        Route::put('updatecustomerstatus', [CustomerController::class, 'updateCustomerStatus']);
 
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);
