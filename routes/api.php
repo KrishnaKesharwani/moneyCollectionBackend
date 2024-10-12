@@ -38,7 +38,7 @@ Route::middleware('api')->group(function () {
 
         //Member
         Route::post('createmember', [MemberController::class, 'store']);
-        //Route::post('updatemember', [MemberController::class, 'update']);
+        Route::post('updatemember', [MemberController::class, 'update']);
         Route::post('members', [MemberController::class, 'index']);
         Route::put('updatememberstatus', [MemberController::class, 'updateMemberStatus']);
 

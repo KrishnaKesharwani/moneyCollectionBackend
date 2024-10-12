@@ -29,6 +29,7 @@ class Company extends Model
         'address',
         'details',
         'member_count',
+        'customer_count',
     ];
 
     protected $hidden = [

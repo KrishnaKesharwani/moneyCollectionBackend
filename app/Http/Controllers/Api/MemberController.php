@@ -66,7 +66,7 @@ class MemberController extends Controller
             'company_id' => 'required',
             'name'  => 'required',
             'mobile' => 'required|digits_between:10,15',
-            'email'  => 'required|email|same:member_login_id',
+            'email'  => 'required|email',
             'join_date' => 'required|date',
             'aadhar_no' => 'nullable|string',
             'image' => 'nullable|string',
@@ -99,10 +99,23 @@ class MemberController extends Controller
                 $company->save();
             }
 
-            $checkUser  = User::where('email', $request->member_login_id)->count();
-            if($checkUser > 0){
-                return sendErrorResponse('Email already exists!', 409, $checkUser);
+            $checkUser = User::where('email', $request->member_login_id)
+                ->orWhere('mobile', $request->mobile)
+                ->first();
+
+            if ($checkUser)
+            {
+                if ($checkUser->email === $request->member_login_id) 
+                {
+                    return sendErrorResponse('Email already exists!', 409);
+                }
+                
+                if ($checkUser->mobile == $request->mobile)
+                {
+                    return sendErrorResponse('Mobile already exists!', 409);
+                }
             }
+
 
             //create user for member
 
@@ -120,6 +133,77 @@ class MemberController extends Controller
             {   
                 $memberData = $this->memberRepository->getById($member->id);
                 return sendSuccessResponse('Member created successfully!', 201, $memberData);
+            }
+            else
+            {
+                return sendErrorResponse('Member not created!', 404);
+            }
+        }
+        catch (Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
+
+    public function update(Request $request)
+    {
+        // Validate the request
+
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required',
+            'member_id' => 'required',
+            'name'  => 'required',
+            'mobile' => 'required|digits_between:10,15',
+            'email'  => 'required|email',
+            'join_date' => 'required|date',
+            'aadhar_no' => 'nullable|string',
+            'image' => 'nullable|string',
+            'status' => 'required|string',
+            'address' => 'nullable|string|max:500',
+        ]);
+        
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $validatedData = $request->all();
+        
+        try {
+            $company        = $this->companyRepository->find($request->company_id);
+            if(!$company)
+            {
+                return sendErrorResponse('Company not found!', 404);
+            }
+
+            $member         = $this->memberRepository->checkMemberExist($request->company_id, $request->member_id);
+            if(!$member)
+            {
+                return sendErrorResponse('Member not found!', 404);
+            }
+
+            $memberUserId   = $member->user_id;
+
+            $checkUserMobile = User::where('id', '!=', $memberUserId)->where('mobile', $request->mobile)->count();
+            
+            if($checkUserMobile>0){
+                return sendErrorResponse('Mobile already exists!', 409);
+            }
+
+            // Process the base64 images
+            if($request->image!=''){
+                $validatedData['image']     = $this->storeBase64Image($request->image, 'member');
+            }
+
+            // Store the company data in the database
+            $member = $this->memberRepository->update($request->member_id,$validatedData);
+
+            // Check if the company was successfully created
+            if ($member)
+            {   
+                // update mobile number in user table
+                User::where('id', $memberUserId)->update(['mobile' => $request->mobile]);
+
+                $memberData = $this->memberRepository->getById($member->id);
+                return sendSuccessResponse('Member Updated successfully!', 201, $memberData);
             }
             else
             {
@@ -181,6 +265,7 @@ class MemberController extends Controller
             'email' => $request->input('member_login_id'),  // Unique identifier for user
             'password' => Hash::make($request->input('password')),  // Hash the password
             'password_hint' => $request->input('password'),
+            'mobile' => $request->input('mobile'),
         ]);        
     }
 
