@@ -31,7 +31,7 @@ class CompanyPlanHistoryController extends Controller
         $validator = Validator::make($request->all(), [
             'plan_id' => 'required',
             'amount' => 'required',
-            'received_date' => 'required|date',
+            'received_date' => 'required',
             'detail' => 'required',
         ]);
         
@@ -60,10 +60,12 @@ class CompanyPlanHistoryController extends Controller
                 }
             }
             // Create the plan history based on the company plan
+            $cleanedReceivedDate        = preg_replace('/\s*\(.*\)$/', '', $request->received_date);
+            $receivedDate               = Carbon::parse($cleanedReceivedDate)->format('Y-m-d');
             $planHistory = $this->companyPlanHistoryRepository->create([
                 'plan_id' => $plan->id,
                 'amount' => $request->amount,
-                'pay_date' => $request->received_date,
+                'pay_date' => $receivedDate,
                 'detail' => $request->detail,
             ]);
             

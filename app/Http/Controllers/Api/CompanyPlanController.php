@@ -41,8 +41,8 @@ class CompanyPlanController extends Controller
             'plan' => 'required|string',
             'total_amount' => 'required|numeric',
             'advance_amount' => 'required|numeric',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date',
+            'start_date' => 'required',
+            'end_date' => 'required',
             'detail' => 'required',
         ]);
 
@@ -59,8 +59,10 @@ class CompanyPlanController extends Controller
             }
             else
             {
-                $startDate = Carbon::parse($request->start_date)->format('Y-m-d');
-                $endDate = Carbon::parse($request->end_date)->format('Y-m-d');
+                $cleanedStartDate           = preg_replace('/\s*\(.*\)$/', '', $request->start_date);
+                $cleanedEndDate             = preg_replace('/\s*\(.*\)$/', '', $request->end_date);
+                $startDate                  = Carbon::parse($cleanedStartDate)->format('Y-m-d');
+                $endDate                    = Carbon::parse($cleanedEndDate)->format('Y-m-d');
                 $checkExistingPlan = $this->companyPlanRepository->checkExistingActivePlan($request->company_id, $startDate);
                 if($checkExistingPlan)
                 {
@@ -78,10 +80,10 @@ class CompanyPlanController extends Controller
                     'status'            => 'pending',
                 ];
 
-                if(Carbon::parse($request->start_date)->isToday())
+                if(Carbon::parse($startDate)->isToday())
                 {
                     $postData['status'] = 'active';
-                }
+                }WWW
 
                 if($request->advance_amount < $request->total_amount){
                     $postData['full_paid'] = 0;

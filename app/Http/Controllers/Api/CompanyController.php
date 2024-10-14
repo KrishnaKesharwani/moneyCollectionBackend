@@ -162,8 +162,8 @@ class CompanyController extends Controller
             'company_name' => 'required|string',
             'owner_name' => 'required|string',
             'mobile' => 'required|digits_between:10,15',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date',
+            'start_date' => 'required',
+            'end_date' => 'required',
             'aadhar_no' => 'nullable|string',
             'plan' => 'required|string',
             'total_amount' => 'required|numeric',
@@ -195,6 +195,8 @@ class CompanyController extends Controller
 
         $user = $this->createUser($request);
         
+        $cleanStartDate       = preg_replace('/\s*\(.*\)$/', '', $request->start_date);
+        $cleanEndDate         = preg_replace('/\s*\(.*\)$/', '', $request->end_date);
 
         // Process the base64 images
         $validatedData['main_logo']     = $this->storeBase64Image($request->main_logo, 'logos/main');
@@ -202,6 +204,8 @@ class CompanyController extends Controller
         $validatedData['favicon_icon']  = $this->storeBase64Image($request->favicon_icon, 'icons/favicon');
         $validatedData['owner_image']   = $this->storeBase64Image($request->owner_image, 'owners');
         $validatedData['user_id']       = $user->id;
+        $validatedData['start_date']    = Carbon::parse($cleanStartDate)->format('Y-m-d');
+        $validatedData['end_date']      = Carbon::parse($cleanEndDate)->format('Y-m-d');
 
         // Store the company data in the database
         $company = Company::create($validatedData);
