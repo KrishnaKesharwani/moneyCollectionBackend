@@ -80,10 +80,12 @@ class CompanyPlanController extends Controller
                     'status'            => 'pending',
                 ];
 
+                \Log::info($postData);
+                
                 if(Carbon::parse($startDate)->isToday())
                 {
                     $postData['status'] = 'active';
-                }WWW
+                }
 
                 if($request->advance_amount < $request->total_amount){
                     $postData['full_paid'] = 0;

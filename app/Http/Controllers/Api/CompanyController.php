@@ -13,11 +13,23 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Repositories\CompanyRepository;
 use Carbon\Carbon;
+use exception;
 
 class CompanyController extends Controller
 {
 
+
+    protected $customerRepository;
+    protected $companyRepository;
+
+    public function __construct(
+        CompanyRepository $companyRepository,
+        )
+    {
+        $this->companyRepository        = $companyRepository;
+    }
 
     public function index(Request $request){
 
@@ -186,44 +198,59 @@ class CompanyController extends Controller
 
         $validatedData = $request->all();
         
-        $checkUser  = User::where('email', $request->company_login_id)->count();
-        if($checkUser > 0){
-            return sendErrorResponse('Company already exists!', 409, $checkUser);
-        }
+        try {
+            
 
-        //create company user after the company is created
-
-        $user = $this->createUser($request);
-        
-        $cleanStartDate       = preg_replace('/\s*\(.*\)$/', '', $request->start_date);
-        $cleanEndDate         = preg_replace('/\s*\(.*\)$/', '', $request->end_date);
-
-        // Process the base64 images
-        $validatedData['main_logo']     = $this->storeBase64Image($request->main_logo, 'logos/main');
-        $validatedData['sidebar_logo']  = $this->storeBase64Image($request->sidebar_logo, 'logos/sidebar');
-        $validatedData['favicon_icon']  = $this->storeBase64Image($request->favicon_icon, 'icons/favicon');
-        $validatedData['owner_image']   = $this->storeBase64Image($request->owner_image, 'owners');
-        $validatedData['user_id']       = $user->id;
-        $validatedData['start_date']    = Carbon::parse($cleanStartDate)->format('Y-m-d');
-        $validatedData['end_date']      = Carbon::parse($cleanEndDate)->format('Y-m-d');
-
-        // Store the company data in the database
-        $company = Company::create($validatedData);
-
-        // Check if the company was successfully created
-        if ($company)
-        {   
-            // Create the company plan after the company is created
-            $companyPlan = $this->createCompanyPlan($company, $request);
-
-            if($companyPlan)
-            {
-                // Create the plan history after the plan is created
-                $this->createCompanyPlanHistory($companyPlan, $request);       
+            $checkUser  = User::where('email', $request->company_login_id)->count();
+            if($checkUser > 0){
+                return sendErrorResponse('Email already exists!', 409, $checkUser);
             }
-        }
 
-        return sendSuccessResponse('Company created successfully!', 201, $company);
+            $checkUserMobile  = User::where('mobile', $request->mobile)->count();
+            if($checkUserMobile > 0){
+                return sendErrorResponse('Mobile already exists!', 409, $checkUserMobile);
+            }
+
+            $user = $this->createUser($request);
+            //create company user after the company is created
+            
+            $cleanStartDate       = preg_replace('/\s*\(.*\)$/', '', $request->start_date);
+            $cleanEndDate         = preg_replace('/\s*\(.*\)$/', '', $request->end_date);
+            $startDate            = Carbon::parse($cleanStartDate)->format('Y-m-d');
+            $endDate              = Carbon::parse($cleanEndDate)->format('Y-m-d');
+
+            // Process the base64 images
+            $validatedData['main_logo']     = $this->storeBase64Image($request->main_logo, 'logos/main');
+            $validatedData['sidebar_logo']  = $this->storeBase64Image($request->sidebar_logo, 'logos/sidebar');
+            $validatedData['favicon_icon']  = $this->storeBase64Image($request->favicon_icon, 'icons/favicon');
+            $validatedData['owner_image']   = $this->storeBase64Image($request->owner_image, 'owners');
+            $validatedData['user_id']       = $user->id;
+            $validatedData['start_date']    = $startDate;
+            $validatedData['end_date']      = $endDate;
+
+            \Log::info($validatedData);
+
+            // Store the company data in the database
+            $company = $this->companyRepository->create($validatedData);
+
+            // Check if the company was successfully created
+            if ($company)
+            {   
+                // Create the company plan after the company is created
+                $companyPlan = $this->createCompanyPlan($company, $request,$startDate,$endDate);
+
+                if($companyPlan)
+                {
+                    // Create the plan history after the plan is created
+                    $this->createCompanyPlanHistory($companyPlan, $request);       
+                }
+            }
+
+            return sendSuccessResponse('Company created successfully!', 201, $company);
+        }
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);    
+        }
     }
 
     public function update(Request $request)
@@ -249,9 +276,15 @@ class CompanyController extends Controller
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
+       
         // Validate the request
         $validatedData = $request->all();
         $company = Company::find($request->company_id);
+
+        $checkUserMobile  = User::where('mobile', $request->mobile)->where('id', '!=', $company->user_id)->count();
+        if($checkUserMobile > 0){
+            return sendErrorResponse('Mobile already exists!', 409, $checkUserMobile);
+        }
 
         if($company)
         {
@@ -284,6 +317,7 @@ class CompanyController extends Controller
             // Check if the company was successfully created
             if ($company->save())
             {   
+                User::where('id', $company->user_id)->update(['mobile' => $request->mobile]);
                 return sendSuccessResponse('Company updated successfully!', 200, $company);
             }
             else
@@ -339,7 +373,7 @@ class CompanyController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \App\Models\CompanyPlan
      */
-    private function createCompanyPlan(Company $company, Request $request)
+    private function createCompanyPlan(Company $company, Request $request,$startDate,$endDate)
     {
         // Create a new company plan
         $planData = [
@@ -347,8 +381,8 @@ class CompanyController extends Controller
             'company_id' => $company->id,
             'total_amount' => $request->total_amount, // assuming 'total_amount' is passed in the request
             'advance_amount' => $request->advance_amount, // assuming 'advance_amount' is passed in the request
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
             'status' => $request->status,
         ];
 
@@ -396,6 +430,7 @@ class CompanyController extends Controller
             'email' => $request->input('company_login_id'),  // Unique identifier for user
             'password' => Hash::make($request->input('password')),  // Hash the password
             'password_hint' => $request->input('password'),
+            'mobile' => $request->input('mobile'),
         ]);        
     }
 
