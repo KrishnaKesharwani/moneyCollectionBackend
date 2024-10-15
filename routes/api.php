@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CompanyPlanHistoryController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\CustomerLoanController;
 
 
 /*
@@ -49,6 +50,11 @@ Route::middleware('api')->group(function () {
         Route::post('customers', [CustomerController::class, 'index']);
         Route::put('updatecustomerstatus', [CustomerController::class, 'updateCustomerStatus']);
         Route::post('importcustomers', [CustomerController::class, 'importCustomers']);
+
+        //customerLoan
+
+        Route::post('createcustomerloan', [CustomerLoanController::class, 'store']);
+        Route::post('companycustomerloans', [CustomerLoanController::class, 'index']);
 
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);
