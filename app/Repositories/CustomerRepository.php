@@ -18,8 +18,15 @@ class CustomerRepository extends BaseRepository
         return $this->model->with('user')->where('id', $customer_id)->first();
     }
 
-    public function getAllCustomers($company_id){
-        return $this->model->with('user')->where('company_id', $company_id)->orderBy('id', 'desc')->get();
+    public function getAllCustomers($company_id, $status = null)
+    {
+        return $this->model->with('user')
+                ->where('company_id', $company_id)
+                ->when($status, function ($query, $status) {
+                    return $query->where('status', $status);
+                })
+                ->orderBy('id', 'desc')
+                ->get();
     }
 
     public function checkCustomerExist($company_id, $member_id){

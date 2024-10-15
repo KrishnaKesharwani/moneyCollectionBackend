@@ -44,7 +44,8 @@ class CustomerController extends Controller
         }
 
         try{
-            $customers = $this->customerRepository->getAllCustomers($request->company_id);
+            $status = $request->status ?? null;
+            $customers = $this->customerRepository->getAllCustomers($request->company_id,$status);
 
             if($customers->isEmpty())
             {
