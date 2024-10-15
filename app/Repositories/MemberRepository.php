@@ -18,9 +18,17 @@ class MemberRepository extends BaseRepository
         return $this->model->with('user')->where('id', $member_id)->first();
     }
 
-    public function getAllMembers($company_id){
-        return $this->model->with('user')->where('company_id', $company_id)->get();
+    public function getAllMembers($company_id, $status = null)
+    {
+        return $this->model->with('user')
+                ->where('company_id', $company_id)
+                ->when($status, function ($query, $status) {
+                    return $query->where('status', $status);
+                })
+                ->orderBy('id', 'desc')
+                ->get();
     }
+
 
     public function checkMemberExist($company_id, $member_id){
         return $this->model->where('company_id', $company_id)->where('id', $member_id)->first();

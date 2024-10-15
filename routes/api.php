@@ -48,6 +48,7 @@ Route::middleware('api')->group(function () {
         Route::post('updatecustomer', [CustomerController::class, 'update']);
         Route::post('customers', [CustomerController::class, 'index']);
         Route::put('updatecustomerstatus', [CustomerController::class, 'updateCustomerStatus']);
+        Route::post('importcustomers', [CustomerController::class, 'importCustomers']);
 
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);

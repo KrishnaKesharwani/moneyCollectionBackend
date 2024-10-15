@@ -15,6 +15,7 @@ use App\Repositories\CompanyRepository;
 use Carbon\Carbon;
 use exception;
 use Auth;
+use Illuminate\Support\Facades\DB;
 
 class CustomerController extends Controller
 {
@@ -224,6 +225,105 @@ class CustomerController extends Controller
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
+
+    public function importCustomers(Request $request)
+    {
+        // Validate the request for an array of customers
+
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required|integer|exists:companies,id',
+            'customers' => 'required|array',
+            'customers.*.name' => 'required|string',
+            'customers.*.mobile' => 'required|digits_between:10,15',
+            'customers.*.email' => 'required|email',
+            'customers.*.join_date' => 'required',
+            'customers.*.aadhar_no' => 'nullable|string',
+            'customers.*.address' => 'nullable|string|max:500',
+            'customers.*.customer_login_id' => 'required|email',
+            'customers.*.password' => 'required|string|min:6',
+            'customers.*.status' => 'required|string',
+        ]);
+    
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $customersData = $request->customers;
+
+        // Extract customer_login_id and mobile from the post data to check for duplicates
+        $loginIds = collect($customersData)->pluck('customer_login_id');
+        $mobiles = collect($customersData)->pluck('mobile');
+
+        // Check for duplicates in the post data
+        if ($loginIds->duplicates()->isNotEmpty() || $mobiles->duplicates()->isNotEmpty()) {
+            return sendErrorResponse('Duplicate customer_login_id or mobile found in the request data.', 409);
+        }
+
+        // Check for duplicates in the database
+        $existingUsersEmails = User::whereIn('email', $loginIds)->get();
+        $existingUsersMobiles = User::WhereIn('mobile', $mobiles)->get();
+
+        if ($existingUsersEmails->isNotEmpty() || $existingUsersMobiles->isNotEmpty()) {
+
+            $errors = [];
+            if(!$existingUsersEmails->isEmpty()){
+                $errors['emails'] = $existingUsersEmails->pluck('email')->toArray();
+            }
+
+            if(!$existingUsersMobiles->isEmpty()){
+                $errors['mobiles'] = $existingUsersMobiles->pluck('mobile')->toArray();
+            }
+
+            return sendErrorResponse('Duplicate customer_login_id or mobile found in the existing records.', 409, $errors);
+        }
+
+        DB::beginTransaction();
+        try {
+
+            $company = $this->companyRepository->find($request->company_id);
+            if (!$company) 
+            {
+                return sendErrorResponse('Company not found!', 404);
+            }
+
+            foreach ($customersData as $data) {
+                // Find the company
+                
+                // Generate customer number
+                $companyName            = $company->company_name;
+                $companyPrefix          = explode(' ', $companyName)[0];
+                $customer_no            = $companyPrefix . '-cus-' . $company->id . '-' . ($company->customer_count + 1);
+
+                // Process images and other data
+                //$data['image'] = $this->storeBase64Image($data['image'], 'customer');
+                $data['customer_no']    = $customer_no;
+                $data['company_id']     = $request->company_id;
+                $data['created_by']     = Auth::user()->id;
+                $cleanTimeString        = preg_replace('/\s*\(.*\)$/', '', $data['join_date']);
+                $data['join_date']      = Carbon::parse($cleanTimeString)->format('Y-m-d');
+
+                // Create user and customer records
+                $user = $this->createUser(new Request($data));
+                if ($user) {
+                    $data['user_id'] = $user->id;
+                }
+                
+                $customer = $this->customerRepository->create($data);
+
+                // Increment the customer count
+                $company->customer_count += 1;
+                $company->save();
+            }
+
+            DB::commit();
+            return sendSuccessResponse('Customers created successfully!', 201);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return sendErrorResponse('Failed to insert customers: ' . $e->getMessage(), 500);
+        }
+    }
+
 
     /**
      * Decode and store base64 image.

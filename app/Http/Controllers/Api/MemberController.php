@@ -42,7 +42,8 @@ class MemberController extends Controller
         }
 
         try{
-            $members = $this->memberRepository->getAllMembers($request->company_id);
+            $status = $request->status ?? null;
+            $members = $this->memberRepository->getAllMembers($request->company_id,$status);
 
             if($members->isEmpty())
             {
