@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use App\Repositories\CustomerLoanRepository;
+use App\Repositories\CustomerRepository;
 use App\Repositories\LoanStatusHistoryRepository;
 use App\Repositories\LoanMemberHistoryRepository;
 use Illuminate\Support\Facades\DB;
@@ -18,17 +19,19 @@ use exception;
 class CustomerLoanController extends Controller
 {
 
-
+    protected $customerRepository;
     protected $customerLoanRepository;
     protected $loanStatusHistoryRepository;
     protected $loanMemberHistoryRepository;
 
     public function __construct(
+        CustomerRepository $customerRepository,
         CustomerLoanRepository $customerLoanRepository,
         LoanStatusHistoryRepository $loanStatusHistoryRepository,
         LoanMemberHistoryRepository $loanMemberHistoryRepository
         )
     {
+        $this->customerRepository                   = $customerRepository;
         $this->customerLoanRepository               = $customerLoanRepository;
         $this->loanStatusHistoryRepository          = $loanStatusHistoryRepository;
         $this->loanMemberHistoryRepository          = $loanMemberHistoryRepository;
@@ -45,15 +48,17 @@ class CustomerLoanController extends Controller
         }
 
         try{
-            $loans = $this->customerLoanRepository->getAllCustomerLoans($request->company_id);
+            $status = $request->status ?? null;
+            $loanStatus = $request->loan_status ?? null;
+            $loans = $this->customerLoanRepository->getAllCustomerLoans($request->company_id,$loanStatus,$status);
 
             if($loans->isEmpty())
             {
-                return sendErrorResponse('Members not found!', 404);
+                return sendErrorResponse('Loans not found!', 404);
             }
             else
             {
-                return sendSuccessResponse('Members found successfully!', 200, $loans);
+                return sendSuccessResponse('Loans found successfully!', 200, $loans);
             }
         }
         catch (\Exception $e) {
@@ -85,10 +90,13 @@ class CustomerLoanController extends Controller
         $validatedData = $request->all();
         
         try {
+            $customer = $this->customerRepository->find($request->customer_id);
+            $loanCount = $customer->loan_count;
             DB::beginTransaction();
 
             $cleanStartDate                             = preg_replace('/\s*\(.*\)$/', '', $request->start_date);
             $cleanEndDate                               = preg_replace('/\s*\(.*\)$/', '', $request->end_date);
+            $validatedData['loan_no']                   = 'Loan-'.$customer->id.'-'.$loanCount+1;
             $validatedData['start_date']                = Carbon::parse($cleanStartDate)->format('Y-m-d');
             $validatedData['end_date']                  = Carbon::parse($cleanEndDate)->format('Y-m-d');
             $validatedData['created_by']                = auth()->user()->id;
@@ -124,6 +132,10 @@ class CustomerLoanController extends Controller
                     $memberHistory = $this->loanMemberHistoryRepository->create($memberData);
                 }
 
+                //update the customer loan count
+                $customer->loan_count = $customer->loan_count+1;
+                $customer->save();
+
                 DB::commit();
 
                 $loanData = $this->customerLoanRepository->getLoanById($customerLoan->id);
@@ -132,6 +144,54 @@ class CustomerLoanController extends Controller
             else
             {
                 return sendErrorResponse('Loan not provided!', 404);
+            }
+        }
+        catch (Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
+
+
+    public function loanRequest(Request $request)
+    {
+        // Validate the request
+
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required|integer|exists:companies,id',
+            'customer_id '  => 'required1|integer|exists:customers,id',
+            'loan_amount' => 'required|numeric',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $validatedData = $request->all();
+        
+        try {
+            DB::beginTransaction();
+            $validatedData['details']                   = $request->details ?? null;    
+            $validatedData['applied_by']                = auth()->user()->id;
+            $validatedData['applied_user_type']         = auth()->user()->user_type;
+            $validatedData['apply_date']                = Carbon::now()->format('Y-m-d');
+            $validatedData['status']                    = 'active';
+            $validatedData['loan_status']               = 'pending';    
+
+            // Store the company data in the database
+            $customerLoan = $this->customerLoanRepository->create($validatedData);
+
+            // Check if the company was successfully created
+            if ($customerLoan)
+            {   
+                DB::commit();
+
+                $loanData = $this->customerLoanRepository->getLoanById($customerLoan->id);
+                return sendSuccessResponse('Applied successfully!', 201, $loanData);
+            }
+            else
+            {
+                return sendErrorResponse('Something is wrong!', 404);
             }
         }
         catch (Exception $e) {

@@ -55,13 +55,12 @@ Route::middleware('api')->group(function () {
 
         Route::post('createcustomerloan', [CustomerLoanController::class, 'store']);
         Route::post('companycustomerloans', [CustomerLoanController::class, 'index']);
+        Route::post('loanrequest',[CustomerLoanController::class,'loanRequest']);
 
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);
     });
 });
-
-
 
 // Logout Route (requires authentication)
 Route::middleware('auth:sanctum')->post('logout', [LoginController::class, 'logout']);

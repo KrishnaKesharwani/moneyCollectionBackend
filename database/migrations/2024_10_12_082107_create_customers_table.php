@@ -25,6 +25,7 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->integer('created_by')->default(0);
             $table->enum('status', ['active', 'inactive']);
+            $table->integer('loan_count')->default(100);
             $table->timestamps();
             // Add soft deletes
             $table->softDeletes();

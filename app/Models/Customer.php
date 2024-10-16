@@ -23,6 +23,7 @@ class Customer extends Model
         'image',
         'address',
         'status',
+        'loan_count',
         'created_by',
     ];
 

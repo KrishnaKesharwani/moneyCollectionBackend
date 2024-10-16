@@ -16,8 +16,19 @@ class CustomerLoanRepository extends BaseRepository
         return $this->model->where('id', $id)->with('customer', 'member')->first();
     }
 
-    public function getAllCustomerLoans($company_id){
-        return $this->model->where('company_id', $company_id)->with('customer', 'member')->orderBy('id', 'desc')->get();
+    public function getAllCustomerLoans($company_id, $loanStatus =null, $status = null)
+    {
+        return $this->model->with('customer', 'member')
+                ->where('company_id', $company_id)
+                ->when($status, function ($query, $status) {
+                    return $query->where('status', $status);
+                })
+                ->when($loanStatus, function ($query, $loanStatus) {
+                    return $query->where('loan_status', $loanStatus);
+                })
+                ->orderBy('id', 'desc')
+                ->get();
     }
+
     // You can add any specific methods related to User here
 }
