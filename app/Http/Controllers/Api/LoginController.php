@@ -37,6 +37,10 @@ class LoginController extends Controller
             return sendErrorResponse('Invalid credentials', 401);
         }
 
+        if($user->status=='inactive'){
+            return sendErrorResponse('Account is inactive now',401);
+        }
+
         // Generate a new API token for the user
         $token = $user->createToken('API Token')->plainTextToken;
 

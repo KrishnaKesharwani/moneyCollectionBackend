@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use App\Repositories\MemberRepository;
 use App\Repositories\CompanyRepository;
+use App\Repositories\UserRepository;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use exception;
 
@@ -21,14 +23,17 @@ class MemberController extends Controller
 
     protected $memberRepository;
     protected $companyRepository;
+    protected $userRepository;
 
     public function __construct(
         CompanyRepository $companyRepository,
         MemberRepository $memberRepository,
+        UserRepository $userRepository,
         )
     {
         $this->companyRepository        = $companyRepository;
         $this->memberRepository         = $memberRepository;
+        $this->userRepository           = $userRepository;
     }
 
     public function index(Request $request){
@@ -86,6 +91,7 @@ class MemberController extends Controller
         
         try {
             $company = $this->companyRepository->find($request->company_id);
+            DB::beginTransaction();
             $member_no = 0;
             if(!$company)
             {
@@ -139,6 +145,7 @@ class MemberController extends Controller
                     $member->user_id = $user->id;
                     $member->save();
                 }
+                DB::commit();
 
                 $memberData = $this->memberRepository->getById($member->id);
                 return sendSuccessResponse('Member created successfully!', 201, $memberData);
@@ -205,6 +212,7 @@ class MemberController extends Controller
             $cleanTimeString            = preg_replace('/\s*\(.*\)$/', '', $request->join_date);
             $validatedData['join_date'] = Carbon::parse($cleanTimeString)->format('Y-m-d');
 
+            DB::beginTransaction();
             // Update the company data in the database
             $member = $this->memberRepository->update($request->member_id,$validatedData);
 
@@ -212,8 +220,8 @@ class MemberController extends Controller
             if ($member)
             {   
                 // update mobile number in user table
-                User::where('id', $memberUserId)->update(['mobile' => $request->mobile]);
-
+                User::where('id', $memberUserId)->update(['mobile' => $request->mobile,'status'=>$request->status]);
+                DB::commit();
                 $memberData = $this->memberRepository->getById($member->id);
                 return sendSuccessResponse('Member Updated successfully!', 201, $memberData);
             }
@@ -278,6 +286,7 @@ class MemberController extends Controller
             'password' => Hash::make($request->input('password')),  // Hash the password
             'password_hint' => $request->input('password'),
             'mobile' => $request->input('mobile'),
+            'status' => $request->input('status',)
         ]);        
     }
 
@@ -296,8 +305,16 @@ class MemberController extends Controller
         $member = Member::find($request->member_id);
         if($member)
         {
+            DB::beginTransaction();
+            
             $member->status = $request->status;
             $member->save();
+
+            //update user status
+            $userId = $member->user_id;
+            $this->userRepository->update($userId,['status'=>$request->status]);
+
+            DB::commit();
             $membarData = $this->memberRepository->getById($member->id);
             if($request->status=='active')
             {
