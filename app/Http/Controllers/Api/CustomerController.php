@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use App\Repositories\CustomerRepository;
 use App\Repositories\CompanyRepository;
+use App\Repositories\UserRepository;
 use Carbon\Carbon;
 use exception;
 use Auth;
@@ -23,14 +24,17 @@ class CustomerController extends Controller
 
     protected $customerRepository;
     protected $companyRepository;
+    protected $userRepository;
 
     public function __construct(
         CompanyRepository $companyRepository,
         customerRepository $customerRepository,
+        userRepository $userRepository
         )
     {
         $this->companyRepository        = $companyRepository;
-        $this->customerRepository         = $customerRepository;
+        $this->customerRepository       = $customerRepository;
+        $this->userRepository           = $userRepository;
     }
 
     public function index(Request $request){
@@ -87,6 +91,7 @@ class CustomerController extends Controller
         $validatedData = $request->all();
         
         try {
+            DB::beginTransaction();
             $company = $this->companyRepository->find($request->company_id);
             $customer_no = 0;
             if(!$company)
@@ -138,6 +143,8 @@ class CustomerController extends Controller
                 $company->customer_count    = $company->customer_count + 1;
                 $company->save();
 
+                DB::commit();
+
                 $customerData = $this->customerRepository->getById($customer->id);
                 return sendSuccessResponse('Customer created successfully!', 201, $customerData);
             }
@@ -177,6 +184,7 @@ class CustomerController extends Controller
         $validatedData = $request->all();
         
         try {
+            DB::beginTransaction();
             $company        = $this->companyRepository->find($request->company_id);
             if(!$company)
             {
@@ -212,8 +220,8 @@ class CustomerController extends Controller
             if ($customer)
             {   
                 // update mobile number in user table
-                User::where('id', $customerUserId)->update(['mobile' => $request->mobile]);
-
+                User::where('id', $customerUserId)->update(['mobile' => $request->mobile,'status'=>$request->status]);
+                DB::commit();
                 $customerData = $this->customerRepository->getById($customer->id);
                 return sendSuccessResponse('Customer Updated successfully!', 201, $customerData);
             }
@@ -377,6 +385,7 @@ class CustomerController extends Controller
             'password' => Hash::make($request->input('password')),  // Hash the password
             'password_hint' => $request->input('password'),
             'mobile' => $request->input('mobile'),
+            'status' => $request->input('status')
         ]);        
     }
 
@@ -395,8 +404,16 @@ class CustomerController extends Controller
         $customer = Customer::find($request->customer_id);
         if($customer)
         {
+            DB::beginTransaction();
             $customer->status = $request->status;
             $customer->save();
+
+            //update user status 
+            $userId = $customer->user_id;
+            $this->userRepository->update($userId,['status'=>$request->status]);
+
+            DB::commit();
+
             $customerData = $this->customerRepository->getById($customer->id);
             if($request->status=='active')
             {
