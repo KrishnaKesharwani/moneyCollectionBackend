@@ -25,6 +25,7 @@ class User extends Authenticatable
         'password',
         'password_hint',
         'mobile',
+        'status'
     ];
 
     /**

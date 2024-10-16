@@ -14,21 +14,23 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Repositories\CompanyRepository;
+use App\Repositories\UserRepository;
 use Carbon\Carbon;
 use exception;
 
 class CompanyController extends Controller
 {
 
-
-    protected $customerRepository;
     protected $companyRepository;
+    protected $userRepository;
 
     public function __construct(
         CompanyRepository $companyRepository,
+        UserRepository $userRepository
         )
     {
         $this->companyRepository        = $companyRepository;
+        $this->userRepository           = $userRepository;
     }
 
     public function index(Request $request){
@@ -199,8 +201,6 @@ class CompanyController extends Controller
         $validatedData = $request->all();
         
         try {
-            
-
             $checkUser  = User::where('email', $request->company_login_id)->count();
             if($checkUser > 0){
                 return sendErrorResponse('Email already exists!', 409, $checkUser);
@@ -228,8 +228,8 @@ class CompanyController extends Controller
             $validatedData['start_date']    = $startDate;
             $validatedData['end_date']      = $endDate;
 
-            \Log::info($validatedData);
-
+            //\Log::info($validatedData);
+            DB::beginTransaction();
             // Store the company data in the database
             $company = $this->companyRepository->create($validatedData);
 
@@ -244,6 +244,7 @@ class CompanyController extends Controller
                     // Create the plan history after the plan is created
                     $this->createCompanyPlanHistory($companyPlan, $request);       
                 }
+                DB::commit();
             }
 
             return sendSuccessResponse('Company created successfully!', 201, $company);
@@ -279,58 +280,66 @@ class CompanyController extends Controller
        
         // Validate the request
         $validatedData = $request->all();
-        $company = Company::find($request->company_id);
 
-        $checkUserMobile  = User::where('mobile', $request->mobile)->where('id', '!=', $company->user_id)->count();
-        if($checkUserMobile > 0){
-            return sendErrorResponse('Mobile already exists!', 409, $checkUserMobile);
-        }
+            try {
+            $company = Company::find($request->company_id);
 
-        if($company)
-        {
-            $company->company_name  = $request->company_name;
-            $company->owner_name    = $request->owner_name;
-            $company->aadhar_no     = $request->aadhar_no;
-            $company->mobile        = $request->mobile;
-            $company->status        = $request->status;
-            $company->address       = $request->address;
-            $company->details       = $request->details;
-            // Process the base64 images
-            if($request->main_logo!='')
-            {
-                $company->main_logo = $this->storeBase64Image($request->main_logo, 'logos/main');
+            $checkUserMobile  = User::where('mobile', $request->mobile)->where('id', '!=', $company->user_id)->count();
+            if($checkUserMobile > 0){
+                return sendErrorResponse('Mobile already exists!', 409, $checkUserMobile);
             }
-            if($request->sidebar_logo!='')
-            {
-                $company->sidebar_logo = $this->storeBase64Image($request->sidebar_logo, 'logos/sidebar');
-            }
-            if($request->favicon_icon!='')
-            {
-                $company->favicon_icon = $this->storeBase64Image($request->favicon_icon, 'icons/favicon');
-            }
-            if($request->owner_image!='')
-            {
-                $company->owner_image = $this->storeBase64Image($request->owner_image, 'owners');
-            }
-            // Update the company data in the database
 
-            // Check if the company was successfully created
-            if ($company->save())
-            {   
-                User::where('id', $company->user_id)->update(['mobile' => $request->mobile]);
-                return sendSuccessResponse('Company updated successfully!', 200, $company);
+            DB::beginTransaction();
+
+            if($company)
+            {
+                $company->company_name  = $request->company_name;
+                $company->owner_name    = $request->owner_name;
+                $company->aadhar_no     = $request->aadhar_no;
+                $company->mobile        = $request->mobile;
+                $company->status        = $request->status;
+                $company->address       = $request->address;
+                $company->details       = $request->details;
+                // Process the base64 images
+                if($request->main_logo!='')
+                {
+                    $company->main_logo = $this->storeBase64Image($request->main_logo, 'logos/main');
+                }
+                if($request->sidebar_logo!='')
+                {
+                    $company->sidebar_logo = $this->storeBase64Image($request->sidebar_logo, 'logos/sidebar');
+                }
+                if($request->favicon_icon!='')
+                {
+                    $company->favicon_icon = $this->storeBase64Image($request->favicon_icon, 'icons/favicon');
+                }
+                if($request->owner_image!='')
+                {
+                    $company->owner_image = $this->storeBase64Image($request->owner_image, 'owners');
+                }
+                // Update the company data in the database
+
+                // Check if the company was successfully created
+                if ($company->save())
+                {   
+                    User::where('id', $company->user_id)->update(['mobile' => $request->mobile,'status'=>$request->status]);
+                    DB::commit();
+                    return sendSuccessResponse('Company updated successfully!', 200, $company);
+                }
+                else
+                {
+                    return sendErrorResponse('Company not updated successfully!', 500);
+                }
+                
             }
             else
             {
-                return sendErrorResponse('Company not updated successfully!', 500);
+                return sendErrorResponse('Company not found!', 404);
             }
-            
         }
-        else
-        {
-            return sendErrorResponse('Company not found!', 404);
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);    
         }
-        
     }
 
     /**
@@ -431,6 +440,7 @@ class CompanyController extends Controller
             'password' => Hash::make($request->input('password')),  // Hash the password
             'password_hint' => $request->input('password'),
             'mobile' => $request->input('mobile'),
+            'status'=> $request->input('status')
         ]);        
     }
 
@@ -446,10 +456,17 @@ class CompanyController extends Controller
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
+        DB::beginTransaction();
         $company = Company::find($request->company_id);
         $company->update(['status' => $request->status]);
         if($company)
         {
+            $userId = $company->user_id;
+            $user = $this->userRepository->find($userId);
+            $user->status = $request->status;
+            $user->save();
+
+            DB::commit();
             if($request->status=='active')
             {
                 return sendSuccessResponse('Company Activated successfully!',200,$company);

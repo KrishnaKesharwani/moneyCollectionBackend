@@ -199,4 +199,87 @@ class CustomerLoanController extends Controller
         }
     }
 
+    public function updateappliedloan(Request $request)
+    {
+        // Validate the request
+
+        $validator = Validator::make($request->all(), [
+            'loan_id' => 'required|integer|exists:customer_loans,id',
+            'installment_amount'  => 'required|numeric',
+            'start_date' => 'required',
+            'end_date' => 'required',
+            'no_of_days' => 'required|integer',
+            'loan_status' => 'required|string',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $validatedData = $request->all();
+        
+        try {
+            $customerLoan   = $this->customerLoanRepository->find($request->loan_id);
+            $customer       = $this->customerRepository->find($customerLoan->customer_id);
+            $loanCount      = $customer->loan_count;
+            DB::beginTransaction();
+
+            $cleanStartDate                             = preg_replace('/\s*\(.*\)$/', '', $request->start_date);
+            $cleanEndDate                               = preg_replace('/\s*\(.*\)$/', '', $request->end_date);
+            $validatedData['loan_no']                   = 'Loan-'.$customer->id.'-'.$loanCount+1;
+            $validatedData['start_date']                = Carbon::parse($cleanStartDate)->format('Y-m-d');
+            $validatedData['end_date']                  = Carbon::parse($cleanEndDate)->format('Y-m-d');
+            $validatedData['created_by']                = auth()->user()->id;
+            $validatedData['loan_status_changed_by']    = auth()->user()->id;
+            $validatedData['loan_status_change_date']   = Carbon::now()->format('Y-m-d H:i:s');
+            $validatedData['status']                    = $request->status ?? 'active';
+            $validatedData['assigned_member_id']        = $request->assigned_member_id ?? 0;
+
+            // Store the company data in the database
+            $customerLoan = $this->customerLoanRepository->update($request->loan_id,$validatedData);
+
+            // Check if the company was successfully created
+            if ($customerLoan)
+            {   
+                $statusData = [
+                    'loan_id' => $customerLoan->id,
+                    'loan_status' => $request->loan_status,
+                    'loan_status_message' => $request->loan_status_message ?? null,
+                    'loan_status_changed_by' => auth()->user()->id,
+                    'loan_status_change_date' => Carbon::now()->format('Y-m-d H:i:s')
+                ];
+
+                $statusHistory = $this->loanStatusHistoryRepository->create($statusData);
+
+                if($request->assigned_member_id){
+                    $memberData = [
+                        'loan_id' => $customerLoan->id,
+                        'member_id' => $request->assigned_member_id,
+                        'assigned_date' => Carbon::now()->format('Y-m-d H:i:s'),
+                        'assigned_by' => auth()->user()->id,
+                    ];
+
+                    $memberHistory = $this->loanMemberHistoryRepository->create($memberData);
+                }
+
+                //update the customer loan count
+                $customer->loan_count = $customer->loan_count+1;
+                $customer->save();
+
+                DB::commit();
+
+                $loanData = $this->customerLoanRepository->getLoanById($customerLoan->id);
+                return sendSuccessResponse('Loan provided successfully!', 201, $loanData);
+            }
+            else
+            {
+                return sendErrorResponse('Loan not provided!', 404);
+            }
+        }
+        catch (Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
+
 }

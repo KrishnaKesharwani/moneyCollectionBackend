@@ -56,6 +56,7 @@ Route::middleware('api')->group(function () {
         Route::post('createcustomerloan', [CustomerLoanController::class, 'store']);
         Route::post('companycustomerloans', [CustomerLoanController::class, 'index']);
         Route::post('loanrequest',[CustomerLoanController::class,'loanRequest']);
+        Route::post('updateappliedloan',[CustomerLoanController::class,'updateappliedloan']);
 
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);
