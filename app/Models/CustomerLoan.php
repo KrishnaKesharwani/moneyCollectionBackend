@@ -53,4 +53,9 @@ class CustomerLoan extends Model
     {
         return $this->hasMany(LoanDocument::class, 'loan_id');
     }
+
+    public function loanHistory()
+    {
+        return $this->hasMany(LoanHistory::class, 'loan_id');
+    }
 }
