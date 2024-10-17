@@ -12,6 +12,7 @@ use App\Repositories\CustomerLoanRepository;
 use App\Repositories\CustomerRepository;
 use App\Repositories\LoanStatusHistoryRepository;
 use App\Repositories\LoanMemberHistoryRepository;
+use App\Repositories\LoanDocumentRepository;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use exception;
@@ -23,18 +24,21 @@ class CustomerLoanController extends Controller
     protected $customerLoanRepository;
     protected $loanStatusHistoryRepository;
     protected $loanMemberHistoryRepository;
+    protected $loanDocumentRepository;
 
     public function __construct(
         CustomerRepository $customerRepository,
         CustomerLoanRepository $customerLoanRepository,
         LoanStatusHistoryRepository $loanStatusHistoryRepository,
-        LoanMemberHistoryRepository $loanMemberHistoryRepository
+        LoanMemberHistoryRepository $loanMemberHistoryRepository,
+        LoanDocumentRepository $loanDocumentRepository
         )
     {
         $this->customerRepository                   = $customerRepository;
         $this->customerLoanRepository               = $customerLoanRepository;
         $this->loanStatusHistoryRepository          = $loanStatusHistoryRepository;
         $this->loanMemberHistoryRepository          = $loanMemberHistoryRepository;
+        $this->loanDocumentRepository               = $loanDocumentRepository;
     }
 
     public function index(Request $request){
@@ -111,6 +115,22 @@ class CustomerLoanController extends Controller
             // Check if the company was successfully created
             if ($customerLoan)
             {   
+                //\Log::info($request->document);
+                if($request->document){
+                    $loanDocument = json_decode($request->document);
+                    if(count($loanDocument)>0){
+                        foreach ($loanDocument as $document) {
+                            if($document!=''){
+                                $savedDocURL = $this->storeBase64Image($document, 'loandocument');
+                                $documentData = [
+                                    'loan_id' => $customerLoan->id,
+                                    'document_url' => $savedDocURL
+                                ];
+                                $documentHistory = $this->loanDocumentRepository->create($documentData);
+                            }
+                        }
+                    }
+                }
                 $statusData = [
                     'loan_id' => $customerLoan->id,
                     'loan_status' => $request->loan_status,
@@ -151,6 +171,38 @@ class CustomerLoanController extends Controller
         }
     }
 
+    /**
+     * Decode and store base64 image.
+     *
+     * @param string|null $base64Image
+     * @param string $directory
+     * @return string|null
+     */
+    private function storeBase64Image($base64Image, $directory)
+    {
+        if (!$base64Image) {
+            return null; // Return null if no image is provided
+        }
+
+        // Extract the mime type and the Base64 data
+        $imageParts = explode(';base64,', $base64Image);
+
+        // Get the image extension from the mime type
+        $imageTypeAux = explode('image/', $imageParts[0]);
+        $imageType = $imageTypeAux[1]; // e.g., 'jpeg', 'png', 'gif'
+
+        // Decode the Base64 string into binary data
+        $imageData = base64_decode($imageParts[1]);
+
+        // Generate a unique file name for the image
+        $fileName = Str::random(10) . '.' . $imageType;
+
+        // Store the image in the public storage folder (or any custom directory)
+        $path = Storage::put("public/{$directory}/{$fileName}", $imageData);
+        
+        // Return the stored path or URL to save in the database
+        return $directory.'/'.$fileName;
+    }
 
     public function loanRequest(Request $request)
     {

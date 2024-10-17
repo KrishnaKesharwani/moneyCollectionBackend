@@ -13,12 +13,12 @@ class CustomerLoanRepository extends BaseRepository
 
     
     public function getLoanById($id){
-        return $this->model->where('id', $id)->with('customer', 'member')->first();
+        return $this->model->where('id', $id)->with('customer', 'member', 'document')->first();
     }
 
     public function getAllCustomerLoans($company_id, $loanStatus =null, $status = null)
     {
-        return $this->model->with('customer', 'member')
+        return $this->model->with('customer', 'member', 'document')
                 ->where('company_id', $company_id)
                 ->when($status, function ($query, $status) {
                     return $query->where('status', $status);

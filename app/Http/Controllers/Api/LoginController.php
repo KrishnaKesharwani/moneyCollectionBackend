@@ -8,11 +8,25 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\Company;
+use App\Models\Member;
+use App\Models\Customer;
 use Illuminate\Support\Facades\Validator;
+use App\Repositories\UserRepository;
 
 
 class LoginController extends Controller
 {
+
+    protected $userRepository;
+
+    public function __construct(
+        UserRepository $userRepository
+        )
+    {
+        $this->userRepository           = $userRepository;
+    }
+
+
     /**
      * Handle a login request.
      */
@@ -44,7 +58,33 @@ class LoginController extends Controller
         // Generate a new API token for the user
         $token = $user->createToken('API Token')->plainTextToken;
 
-        $userData = User::with('company')->where('id', $user->id)->first();
+        $userData = User::where('id', $user->id)->first();
+        if($userData){
+            $userId     = $userData->id;
+            $userType   = $userData->user_type;
+            $userData['company']    = null;
+            $userData['member']     = null;
+            $userData['customer']   = null;
+            if($userType==1){
+                $company = Company::where('user_id', $userId)->first();
+                if($company){
+                    $userData['company'] = $company;
+                }
+            }else if($userType==2){
+                $member = Member::where('user_id', $userId)->first();
+                if($member){
+                    $userData['member'] = $member;
+                    $userData['company'] = Company::where('id', $member->company_id)->first();
+                }
+            }elseif($userType==3){
+                $customer = Customer::where('user_id', $userId)->first();
+                if($customer){
+                    $userData['customer'] = $customer;
+                    $userData['company'] = Company::where('id', $customer->company_id)->first();
+                }
+            }
+        }
+
         // Return the token and user data
         return sendSuccessResponse('Login successful',200, $userData, $token);
     }

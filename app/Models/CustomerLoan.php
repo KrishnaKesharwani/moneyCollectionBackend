@@ -48,4 +48,9 @@ class CustomerLoan extends Model
     {
         return $this->belongsTo(Member::class, 'assigned_member_id');
     }
+
+    public function document()
+    {
+        return $this->hasMany(LoanDocument::class, 'loan_id');
+    }
 }
