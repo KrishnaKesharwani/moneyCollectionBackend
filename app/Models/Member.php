@@ -45,4 +45,9 @@ class Member extends Model
     {
         return $this->belongsTo(Company::class, 'company_id');
     }
+
+    public function recived_member()
+    {
+        return $this->hasMany(LoanHistory::class, 'receiver_member_id');
+    }
 }

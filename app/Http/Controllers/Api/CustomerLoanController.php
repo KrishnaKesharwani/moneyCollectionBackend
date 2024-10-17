@@ -13,6 +13,8 @@ use App\Repositories\CustomerRepository;
 use App\Repositories\LoanStatusHistoryRepository;
 use App\Repositories\LoanMemberHistoryRepository;
 use App\Repositories\LoanDocumentRepository;
+use App\Repositories\LoanHistoryRepository;
+use App\Repositories\MemberRepository;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use exception;
@@ -25,13 +27,17 @@ class CustomerLoanController extends Controller
     protected $loanStatusHistoryRepository;
     protected $loanMemberHistoryRepository;
     protected $loanDocumentRepository;
+    protected $loanHistoryRepository;
+    protected $memberRepository;
 
     public function __construct(
         CustomerRepository $customerRepository,
         CustomerLoanRepository $customerLoanRepository,
         LoanStatusHistoryRepository $loanStatusHistoryRepository,
         LoanMemberHistoryRepository $loanMemberHistoryRepository,
-        LoanDocumentRepository $loanDocumentRepository
+        LoanDocumentRepository $loanDocumentRepository,
+        LoanHistoryRepository $loanHistoryRepository,
+        MemberRepository $memberRepository
         )
     {
         $this->customerRepository                   = $customerRepository;
@@ -39,6 +45,8 @@ class CustomerLoanController extends Controller
         $this->loanStatusHistoryRepository          = $loanStatusHistoryRepository;
         $this->loanMemberHistoryRepository          = $loanMemberHistoryRepository;
         $this->loanDocumentRepository               = $loanDocumentRepository;
+        $this->loanHistoryRepository                = $loanHistoryRepository;
+        $this->memberRepository                     = $memberRepository;
     }
 
     public function index(Request $request){
@@ -62,11 +70,30 @@ class CustomerLoanController extends Controller
             }
             else
             {
+                foreach($loans as $loan)
+                {
+                    $paidAmount = $this->loanHistoryRepository->getTotalPaidAmount($loan->id);
+                    $loan->applied_user_name = '';
+                    if($loan->apply_date!=null){
+                        if($loan->applied_user_type==3){
+                            $loan->applied_user_name = 'self';
+                        }
+                        if($loan->applied_user_type==2){
+                            $member = $this->memberRepository->getMemberByUserId($loan->applied_by);
+                            if($member)
+                            {
+                                $loan->applied_user_name = $member->name;
+                            }
+                        }
+                    }
+                    $loan->total_paid = $paidAmount;
+                    $loan->remaining_amount = $loan->loan_amount - $paidAmount;
+                }
                 return sendSuccessResponse('Loans found successfully!', 200, $loans);
             }
         }
         catch (\Exception $e) {
-            return sendErrorResponse($e->getMessage(), 500);
+            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
         }
     }
 

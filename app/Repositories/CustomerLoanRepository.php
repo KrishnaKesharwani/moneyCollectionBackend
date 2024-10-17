@@ -18,7 +18,7 @@ class CustomerLoanRepository extends BaseRepository
 
     public function getAllCustomerLoans($company_id, $loanStatus =null, $status = null)
     {
-        return $this->model->with('customer', 'member', 'document')
+        return $this->model->with('customer', 'member', 'document', 'loanHistory', 'loanHistory.recieved_member')
                 ->where('company_id', $company_id)
                 ->when($status, function ($query, $status) {
                     return $query->where('status', $status);

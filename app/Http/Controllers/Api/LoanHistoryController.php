@@ -41,15 +41,30 @@ class LoanHistoryController extends Controller
         }
 
         $userId = auth()->user()->id;
+        \Log::info('user'.$userId);
         
         $member = $this->memberRepository->getMemberByUserId($userId);
-        $memberId = $member->id ?? 0;
+        \Log::info($member);
+
+        if(!$member)
+        {
+            return sendErrorResponse('Member not found!', 404);
+        }
+
+        $memberId = $member->id;
 
         $loan = $this->customerLoanRepository->find($request->loan_id);
 
         if(!$loan)
         {
             return sendErrorResponse('Loan not found!', 404);
+        }
+        else
+        {
+            if($loan->assigned_member_id != $memberId)
+            {
+                return sendErrorResponse('You are not the assigned member of this loan for collection!', 404);
+            }
         }
 
         
@@ -74,7 +89,7 @@ class LoanHistoryController extends Controller
             'amount' => $request->amount,
             'receive_date' => $receiveDate,
             'detail' => $request->detail ?? '',
-            'receiver_member_id' =>  $memberId ?? 0
+            'receiver_member_id' =>  $memberId
         ]);
         
         if($LoanHistory)

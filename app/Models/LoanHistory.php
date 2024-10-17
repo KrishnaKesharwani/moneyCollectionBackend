@@ -15,11 +15,15 @@ class LoanHistory extends Model
         'loan_id',
         'amount',
         'receive_date',
-        'received_member_id',
+        'receiver_member_id',
     ];
 
     protected $hidden = [
         'created_at',
         'updated_at',
     ];
+
+    public function recieved_member(){
+        return $this->belongsTo(Member::class, 'receiver_member_id')->select('id', 'name');
+    }
 }
