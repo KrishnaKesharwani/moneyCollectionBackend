@@ -41,10 +41,10 @@ class LoanHistoryController extends Controller
         }
 
         $userId = auth()->user()->id;
-        \Log::info('user'.$userId);
+        //\Log::info('user'.$userId);
         
         $member = $this->memberRepository->getMemberByUserId($userId);
-        \Log::info($member);
+        //\Log::info($member);
 
         if(!$member)
         {
@@ -68,13 +68,7 @@ class LoanHistoryController extends Controller
         }
 
         
-        $installment = $loan->installment_amount;
-
-        if($request->amount != $installment)
-        {
-            return sendErrorResponse('Amount is not equal to installment!', 422);
-        }
-    
+        $installment     = $loan->installment_amount;
         $totalPaidAmount = $this->loanHistoryRepository->getTotalPaidAmount($request->loan_id);
         $remainingAmount = $loan->loan_amount - $totalPaidAmount;
 
