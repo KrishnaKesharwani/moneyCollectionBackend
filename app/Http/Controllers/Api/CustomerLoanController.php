@@ -50,9 +50,22 @@ class CustomerLoanController extends Controller
     }
 
     public function index(Request $request){
-        $validator = Validator::make($request->all(), [
-            'company_id' => 'required',
-        ]);
+
+        $inputData = [
+            'company_id' => 'required|exists:companies,id',
+        ];
+
+        if(auth()->user()->user_type == 3)
+        {
+            $inputData['customer_id'] = 'required|exists:customers,id';
+        }
+
+        if(auth()->user()->user_type == 2)
+        {
+            $inputData['member_id'] = 'required|exists:members,id';
+        }
+
+        $validator = Validator::make($request->all(), $inputData);
         
 
         if ($validator->fails()) {
@@ -60,10 +73,11 @@ class CustomerLoanController extends Controller
         }
 
         try{
-            $status = $request->status ?? null;
+            $status = $request->status ?? 'active';
             $loanStatus = $request->loan_status ?? null;
-            $loans = $this->customerLoanRepository->getAllCustomerLoans($request->company_id,$loanStatus,$status);
-
+            $member = $request->member_id ?? null;
+            $customer = $request->customer_id ?? null;
+            $loans = $this->customerLoanRepository->getAllCustomerLoans($request->company_id,$loanStatus,$status,$member,$customer);
             if($loans->isEmpty())
             {
                 return sendErrorResponse('Loans not found!', 404);
@@ -110,7 +124,6 @@ class CustomerLoanController extends Controller
             'end_date' => 'required',
             'no_of_days' => 'required|integer',
             'loan_status' => 'required|string',
-            'status' => 'required|string',
         ]);
         
 
