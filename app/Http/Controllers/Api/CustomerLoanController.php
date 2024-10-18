@@ -334,6 +334,23 @@ class CustomerLoanController extends Controller
             // Check if the company was successfully created
             if ($customerLoan)
             {   
+
+                if($request->document){
+                    $loanDocument = json_decode($request->document);
+                    if(count($loanDocument)>0){
+                        foreach ($loanDocument as $document) {
+                            if($document!=''){
+                                $savedDocURL = $this->storeBase64Image($document, 'loandocument');
+                                $documentData = [
+                                    'loan_id' => $customerLoan->id,
+                                    'document_url' => $savedDocURL
+                                ];
+                                $documentHistory = $this->loanDocumentRepository->create($documentData);
+                            }
+                        }
+                    }
+                }
+                
                 $statusData = [
                     'loan_id' => $customerLoan->id,
                     'loan_status' => $request->loan_status,
