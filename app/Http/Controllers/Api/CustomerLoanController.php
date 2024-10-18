@@ -102,6 +102,18 @@ class CustomerLoanController extends Controller
                     }
                     $loan->total_paid = $paidAmount;
                     $loan->remaining_amount = $loan->loan_amount - $paidAmount;
+                    $loan->paid_today = 'no';
+                    $loanMaxDate = $this->loanHistoryRepository->getMaxLoanHistoryDate($loan->id);
+                    if($loanMaxDate)
+                    {
+                        //convert loan max date to carbon Y-m-d format
+                        $loanMaxDate = Carbon::parse($loanMaxDate)->format('Y-m-d');
+                        if($loanMaxDate == Carbon::now()->format('Y-m-d'))
+                        {
+                            $loan->paid_today = 'yes';
+                        }
+                    }
+
                 }
                 return sendSuccessResponse('Loans found successfully!', 200, $loans);
             }
@@ -350,7 +362,7 @@ class CustomerLoanController extends Controller
                         }
                     }
                 }
-                
+
                 $statusData = [
                     'loan_id' => $customerLoan->id,
                     'loan_status' => $request->loan_status,
