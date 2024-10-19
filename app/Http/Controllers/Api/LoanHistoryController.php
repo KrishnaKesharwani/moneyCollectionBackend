@@ -9,6 +9,7 @@ use App\Repositories\LoanHistoryRepository;
 use App\Repositories\MemberRepository;
 use App\Repositories\CustomerLoanRepository;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;    
 
 class LoanHistoryController extends Controller
@@ -33,7 +34,7 @@ class LoanHistoryController extends Controller
         // Validate the request
         $validator = Validator::make($request->all(), [
             'loan_id' => 'required|integer|exists:customer_loans,id',
-            'amount' => 'required',
+            'amount' => 'required|numeric|min:1',
         ]);
         
         if ($validator->fails()) {
@@ -41,11 +42,7 @@ class LoanHistoryController extends Controller
         }
 
         $userId = auth()->user()->id;
-        //\Log::info('user'.$userId);
-        
         $member = $this->memberRepository->getMemberByUserId($userId);
-        //\Log::info($member);
-
         if(!$member)
         {
             return sendErrorResponse('Member not found!', 404);
@@ -72,12 +69,14 @@ class LoanHistoryController extends Controller
         $totalPaidAmount = $this->loanHistoryRepository->getTotalPaidAmount($request->loan_id);
         $remainingAmount = $loan->loan_amount - $totalPaidAmount;
 
-        if($request->amount>$remainingAmount)
+        if($request->amount!=$remainingAmount)
         {
             return sendErrorResponse('Amount is greater than remaining amount!', 422);
         }
         
         $receiveDate    = Carbon::now()->format('Y-m-d H:i:s');
+
+        DB::beginTransaction();
         $LoanHistory    = $this->loanHistoryRepository->create([
             'loan_id' => $request->loan_id,
             'amount' => $request->amount,
@@ -88,6 +87,12 @@ class LoanHistoryController extends Controller
         
         if($LoanHistory)
         {
+            $totalPaidAmount = $this->loanHistoryRepository->getTotalPaidAmount($request->loan_id);
+            if($totalPaidAmount >= $loan->loan_amount)
+            {
+                $loan->update(['loan_status' => 'completed']);
+            }
+            DB::commit();
             return sendSuccessResponse('Amount Paid successfully!', 201, $LoanHistory);
         }
         else

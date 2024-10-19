@@ -84,6 +84,9 @@ class CustomerLoanController extends Controller
             }
             else
             {
+                $totalRemaingAmount = 0;
+                $totalCustomer = [];
+
                 foreach($loans as $loan)
                 {
                     $paidAmount = $this->loanHistoryRepository->getTotalPaidAmount($loan->id);
@@ -101,7 +104,13 @@ class CustomerLoanController extends Controller
                         }
                     }
                     $loan->total_paid = $paidAmount;
-                    $loan->remaining_amount = $loan->loan_amount - $paidAmount;
+                    $remaingAmount = $loan->loan_amount - $paidAmount;
+                    $loan->remaining_amount = $remaingAmount;
+                    if($loan->loan_status == 'paid'){
+                        $totalRemaingAmount = $totalRemaingAmount + $remaingAmount;
+                        $totalCustomer[] = $loan->customer_id;
+                    }
+
                     $loan->paid_today = 'no';
                     $loanMaxDate = $this->loanHistoryRepository->getMaxLoanHistoryDate($loan->id);
                     if($loanMaxDate)
@@ -113,9 +122,19 @@ class CustomerLoanController extends Controller
                             $loan->paid_today = 'yes';
                         }
                     }
-
                 }
-                return sendSuccessResponse('Loans found successfully!', 200, $loans);
+
+                $totalCustomerCount = 0;
+                if(!empty($totalCustomer)){
+                    $totalCustomer = array_unique($totalCustomer);
+                    $totalCustomerCount = count($totalCustomer);
+                }
+                $loanData = [
+                    'loans' => $loans,
+                    'total_remaining_amount' => $totalRemaingAmount,
+                    'total_cusotomer' => $totalCustomerCount 
+                ];
+                return sendSuccessResponse('Loans found successfully!', 200, $loanData);
             }
         }
         catch (\Exception $e) {
