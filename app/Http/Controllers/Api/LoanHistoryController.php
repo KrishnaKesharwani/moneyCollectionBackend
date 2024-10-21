@@ -10,6 +10,7 @@ use App\Repositories\MemberRepository;
 use App\Repositories\CustomerLoanRepository;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use exception;
 use Carbon\Carbon;    
 
 class LoanHistoryController extends Controller
@@ -69,7 +70,7 @@ class LoanHistoryController extends Controller
         $totalPaidAmount = $this->loanHistoryRepository->getTotalPaidAmount($request->loan_id);
         $remainingAmount = $loan->loan_amount - $totalPaidAmount;
 
-        if($request->amount!=$remainingAmount)
+        if($request->amount>$remainingAmount)
         {
             return sendErrorResponse('Amount is greater than remaining amount!', 422);
         }
@@ -98,6 +99,55 @@ class LoanHistoryController extends Controller
         else
         {
             return sendErrorResponse('Amount not created!', 500);
+        }
+    }
+
+    public function getTodayCollection(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'member_id' => 'required|integer|exists:members,id',
+        ]);
+        
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            $collection = $this->loanHistoryRepository->getTodayCollection($request->member_id);
+            if($collection->isEmpty())
+            {
+                return sendErrorResponse('Collection not found!', 404);
+            }
+            else
+            {
+                $totalCollection = 0;
+                $totalAttendedCustomer = 0;
+                $totalCustomer = 0;
+                $loanIds = [];
+                foreach ($collection as $item) {
+                    $totalCollection += $item->amount;
+                    $loanIds[] = $item->loan_id;                  
+                }
+
+                if(count($loanIds) > 1){
+                    $loanIds = array_unique($loanIds);
+                    $totalAttendedCustomer = $this->customerLoanRepository->getTotalAttendedCustomer($loanIds);
+                }
+
+                $totalCustomer = $this->customerLoanRepository->getTotalCustomers($request->member_id,'paid');
+                $responseData = 
+                [
+                    'collection' => $collection,
+                    'attended_customer' => $totalAttendedCustomer,
+                    'total_customer' => $totalCustomer,
+                ];
+
+
+                return sendSuccessResponse('Collection found successfully!', 200, $responseData);
+            }
+        }
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
         }
     }
 }

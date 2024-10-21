@@ -24,6 +24,7 @@ class Customer extends Model
         'address',
         'status',
         'loan_count',
+        'deposit_count',
         'created_by',
     ];
 

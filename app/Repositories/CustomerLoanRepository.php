@@ -38,5 +38,20 @@ class CustomerLoanRepository extends BaseRepository
         return $loans;
     }
 
+    public function getTotalAttendedCustomer($loanId){
+        //get unique customer count
+        return $this->model->whereIn('id', $loanId)->distinct('customer_id')->count();
+    }
+
+    public function getTotalCustomers($memberId, $loanStatus) {
+        return $this->model
+            ->where('assigned_member_id', $memberId)
+            ->where('loan_status', $loanStatus)
+            ->where('status', 'active')
+            ->distinct('customer_id')
+            ->count('customer_id');
+    }
+    
+
     // You can add any specific methods related to User here
 }

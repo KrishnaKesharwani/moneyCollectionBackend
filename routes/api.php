@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerLoanController;
+use App\Http\Controllers\Api\CustomerDepositController;
 use App\Http\Controllers\Api\LoanHistoryController;
 
 
@@ -58,7 +59,12 @@ Route::middleware('api')->group(function () {
         Route::post('companycustomerloans', [CustomerLoanController::class, 'index']);
         Route::post('loanrequest',[CustomerLoanController::class,'loanRequest']);
         Route::post('updateappliedloan',[CustomerLoanController::class,'updateappliedloan']);
-        Route::Post('collectmoney',[LoanHistoryController::class,'store']);
+        Route::post('collectmoney',[LoanHistoryController::class,'store']);
+        Route::post('today-collection',[LoanHistoryController::class,'getTodayCollection']);
+
+        //customerdeposit
+        Route::post('create-customer-deposit', [CustomerDepositController::class, 'store']);
+        Route::post('company-customer-deposits', [CustomerDepositController::class, 'index']);
 
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);

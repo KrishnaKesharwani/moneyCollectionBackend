@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\LoanHistory;
+use Carbon\Carbon;
 
 class LoanHistoryRepository extends BaseRepository
 {
@@ -23,5 +24,11 @@ class LoanHistoryRepository extends BaseRepository
         else
             return null;
     }
+
+    public function getTodayCollection($memberId){
+        $data = $this->model->with('loan.customer')->where('receiver_member_id', $memberId)->whereDate('receive_date', carbon::today())->get();
+        return $data;
+    }
+    
     // You can add any specific methods related to User here
 }

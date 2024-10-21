@@ -5,16 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class LoanHistory extends Model
+class DepositHistory extends Model
 {
     use HasFactory;
 
-    protected $table = 'loan_history';
+    protected $table = 'deposit_history';
 
     protected $fillable = [
-        'loan_id',
+        'deposit_id',
         'amount',
-        'receive_date',
+        'action_type',
+        'action_date',
         'receiver_member_id',
     ];
 
@@ -27,7 +28,8 @@ class LoanHistory extends Model
         return $this->belongsTo(Member::class, 'receiver_member_id')->select('id', 'name');
     }
 
-    public function loan(){
-        return $this->belongsTo(CustomerLoan::class, 'loan_id')->select('id', 'customer_id','loan_amount','loan_no');
+
+    public function deposit(){
+        return $this->belongsTo(CustomerDeposit::class, 'deposit_id')->select('id', 'customer_id','loan_amount','loan_no');
     }
 }

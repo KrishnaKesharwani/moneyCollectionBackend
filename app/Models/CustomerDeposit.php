@@ -5,32 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class CustomerLoan extends Model
+class CustomerDeposit extends Model
 {
     use HasFactory;
 
-    protected $table = 'customer_loans';
+    protected $table = 'customer_deposits';
 
     protected $fillable = [
         'company_id',
         'customer_id',
-        'loan_no',
-        'loan_amount',
-        'installment_amount',
-        'no_of_days',
-        'start_date',
-        'end_date',
-        'apply_date',
+        'deposit_no',
         'assigned_member_id',
         'details',
         'created_by',
-        'applied_by',
-        'applied_user_type',
         'status',
-        'loan_status',
-        'loan_status_message',
-        'loan_status_changed_by',
-        'loan_status_change_date',
     ];
 
     protected $hidden = [
@@ -49,13 +37,8 @@ class CustomerLoan extends Model
         return $this->belongsTo(Member::class, 'assigned_member_id')->select('id','member_no','name', 'image');;
     }
 
-    public function document()
+    public function depositHistory()
     {
-        return $this->hasMany(LoanDocument::class, 'loan_id');
-    }
-
-    public function loanHistory()
-    {
-        return $this->hasMany(LoanHistory::class, 'loan_id');
+        return $this->hasMany(DepositHistory::class, 'deposit_id');
     }
 }
