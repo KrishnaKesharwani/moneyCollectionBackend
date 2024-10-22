@@ -16,6 +16,7 @@ class CustomerDeposit extends Model
         'customer_id',
         'deposit_no',
         'assigned_member_id',
+        'member_changed_reason',
         'details',
         'created_by',
         'status',

@@ -228,4 +228,47 @@ class CustomerDepositController extends Controller
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
+
+    public function changeDepositMember(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'deposit_id' => 'required|integer|exists:customer_deposits,id',
+            'member_id' => 'required|integer|exists:members,id',
+        ]);
+        
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }    
+
+        try{            
+            $customerDeposit   = $this->customerDepositRepository->find($request->deposit_id);
+            if($customerDeposit->assigned_member_id == $request->member_id)
+            {
+                return sendErrorResponse('Deposite member already assigned!', 409);
+            }
+            DB::beginTransaction();
+            $customerDeposit->assigned_member_id = $request->member_id;
+            $customerDeposit->member_changed_reason = $request->reason ?? null;
+            if($customerDeposit->save())
+            {
+                $memberData = [
+                    'deposit_id' => $customerDeposit->id,
+                    'member_id' => $request->member_id,
+                    'member_changed_reason' => $request->reason ?? null,
+                    'assigned_date' => Carbon::now()->format('Y-m-d H:i:s'),
+                    'assigned_by' => auth()->user()->id,
+                ];
+                $memberHistory = $this->depositeMemberHistoryRepository->create($memberData);
+                DB::commit();
+                return sendSuccessResponse('Deposit member changed successfully!', 200);
+            }
+            else
+            {   
+                return sendErrorResponse('Deposit member not changed!', 404);
+            }
+        }
+        catch (Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
 }

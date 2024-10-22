@@ -31,6 +31,7 @@ class CustomerLoan extends Model
         'loan_status_message',
         'loan_status_changed_by',
         'loan_status_change_date',
+        'member_changed_reason',
     ];
 
     protected $hidden = [

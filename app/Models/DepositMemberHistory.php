@@ -16,6 +16,7 @@ class DepositMemberHistory extends Model
         'member_id',
         'assigned_date',
         'assigned_by',
+        'member_changed_reason',
     ];
 
     protected $hidden = [

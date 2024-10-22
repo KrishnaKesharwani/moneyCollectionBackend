@@ -462,5 +462,48 @@ class CustomerLoanController extends Controller
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
+    
+    public function changeLoanMember(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'loan_id' => 'required|integer|exists:customer_loans,id',
+            'member_id' => 'required|integer|exists:members,id',
+        ]);
+        
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }    
 
+        try{            
+            $customerLoan   = $this->customerLoanRepository->find($request->loan_id);
+            if($customerLoan->assigned_member_id == $request->member_id)
+            {
+                // this loan member already asigned
+                return sendErrorResponse('Loan member already assigned!', 409);
+            }
+            DB::beginTransaction();
+            $customerLoan->assigned_member_id = $request->member_id;
+            $customerLoan->member_changed_reason = $request->reason ?? null;
+            if($customerLoan->save())
+            {
+                $memberData = [
+                    'loan_id' => $customerLoan->id,
+                    'member_id' => $request->member_id,
+                    'member_changed_reason' => $request->reason ?? null,
+                    'assigned_date' => Carbon::now()->format('Y-m-d H:i:s'),
+                    'assigned_by' => auth()->user()->id,
+                ];
+                $memberHistory = $this->loanMemberHistoryRepository->create($memberData);
+                DB::commit();
+                return sendSuccessResponse('Loan member changed successfully!', 200);
+            }
+            else
+            {   
+                return sendErrorResponse('Loan member not changed!', 404);
+            }
+        }
+        catch (Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
 }
