@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerLoanController;
 use App\Http\Controllers\Api\CustomerDepositController;
 use App\Http\Controllers\Api\LoanHistoryController;
+use App\Http\Controllers\Api\DepositHistoryController;
 
 
 /*
@@ -65,6 +66,7 @@ Route::middleware('api')->group(function () {
         //customerdeposit
         Route::post('create-customer-deposit', [CustomerDepositController::class, 'store']);
         Route::post('company-customer-deposits', [CustomerDepositController::class, 'index']);
+        Route::post('collect-deposit-money', [DepositHistoryController::class, 'store']);
 
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);

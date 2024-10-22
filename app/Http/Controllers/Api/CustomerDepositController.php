@@ -47,11 +47,6 @@ class CustomerDepositController extends Controller
             'company_id' => 'required|exists:companies,id',
         ];
 
-        if(auth()->user()->user_type == 3)
-        {
-            $inputData['customer_id'] = 'required|exists:customers,id';
-        }
-
         if(auth()->user()->user_type == 2)
         {
             $inputData['member_id'] = 'required|exists:members,id';
@@ -77,7 +72,8 @@ class CustomerDepositController extends Controller
             {
                 $totalRemaingAmount = 0;
                 $totalCustomer = [];
-
+                $totalPaidAmount = 0;
+                
                 foreach($deposits as $deposit)
                 {
                     $paidAmount             = $this->depositeHistoryRepository->getTotalDepositAmount($deposit->id,'credit');
@@ -89,6 +85,7 @@ class CustomerDepositController extends Controller
                     $deposit->paid_today = 'no';
                     if($deposit->status == 'active'){
                         $totalRemaingAmount = $totalRemaingAmount + $remaingAmount;
+                        $totalPaidAmount    = $totalPaidAmount + $paidAmount;
                         $totalCustomer[]    = $deposit->customer_id;
                     }
                     
@@ -112,8 +109,11 @@ class CustomerDepositController extends Controller
                 $depositData = [
                     'deposits' => $deposits,
                     'total_remaining_amount' => $totalRemaingAmount,
-                    'total_cusotomer' => $totalCustomerCount 
+                    'total_cusotomer' => $totalCustomerCount,
+                    'total_paid_amount' => $totalPaidAmount,
+                    'last_date_total_credit' => $this->customerDepositRepository->getLastDateTransaction($request->company_id,$member,$customer,'credit'),
                 ];
+
                 return sendSuccessResponse('Deposits found successfully!', 200, $depositData);
             }
         }

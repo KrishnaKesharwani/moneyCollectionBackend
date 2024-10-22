@@ -49,5 +49,29 @@ class CustomerDepositRepository extends BaseRepository
             ->count('customer_id');
     }
     
+
+    //get total credit amount by a member of last date
+    public function getLastDateTransaction($companyId, $memberId, $customer, $depositType)
+{
+    $amount = DB::table('customer_deposits')
+        ->where('company_id', $companyId)
+        ->when($memberId, function ($query, $memberId) {
+            return $query->where('assigned_member_id', $memberId);
+        })
+        ->when($customer, function ($query, $customer) {
+            return $query->where('customer_id', $customer);
+        })
+        ->join('deposit_history', 'customer_deposits.id', '=', 'deposit_history.deposit_id')
+        ->where('deposit_history.action_type', $depositType)
+        ->where('deposit_history.action_date', function ($query) use ($depositType) {
+            $query->select(DB::raw('MAX(deposit_history.action_date)'))
+                  ->from('deposit_history')
+                  ->where('action_type', $depositType)
+                  ->groupBy('deposit_history.deposit_id');
+        })
+        ->sum('deposit_history.amount');
+
+    return $amount;
+}
     // You can add any specific methods related to User here
 }
