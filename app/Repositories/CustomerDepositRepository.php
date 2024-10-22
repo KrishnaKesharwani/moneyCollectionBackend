@@ -52,26 +52,46 @@ class CustomerDepositRepository extends BaseRepository
 
     //get total credit amount by a member of last date
     public function getLastDateTransaction($companyId, $memberId, $customer, $depositType)
-{
-    $amount = DB::table('customer_deposits')
-        ->where('company_id', $companyId)
-        ->when($memberId, function ($query, $memberId) {
-            return $query->where('assigned_member_id', $memberId);
-        })
-        ->when($customer, function ($query, $customer) {
-            return $query->where('customer_id', $customer);
-        })
-        ->join('deposit_history', 'customer_deposits.id', '=', 'deposit_history.deposit_id')
-        ->where('deposit_history.action_type', $depositType)
-        ->where('deposit_history.action_date', function ($query) use ($depositType) {
-            $query->select(DB::raw('MAX(deposit_history.action_date)'))
-                  ->from('deposit_history')
-                  ->where('action_type', $depositType)
-                  ->groupBy('deposit_history.deposit_id');
-        })
-        ->sum('deposit_history.amount');
+    {
+        $amount = DB::table('customer_deposits')
+            ->where('company_id', $companyId)
+            ->when($memberId, function ($query, $memberId) {
+                return $query->where('assigned_member_id', $memberId);
+            })
+            ->when($customer, function ($query, $customer) {
+                return $query->where('customer_id', $customer);
+            })
+            ->join('deposit_history', 'customer_deposits.id', '=', 'deposit_history.deposit_id')
+            ->where('deposit_history.action_type', $depositType)
+            ->where('deposit_history.action_date', function ($query) use ($depositType) {
+                $query->select(DB::raw('MAX(deposit_history.action_date)'))
+                    ->from('deposit_history')
+                    ->where('action_type', $depositType)
+                    ->groupBy('deposit_history.deposit_id');
+            })
+            ->sum('deposit_history.amount');
 
-    return $amount;
-}
+        return $amount;
+    }
+
+    public function getdepositHistory($customerId,$depositId,$fromDate){
+        $history = DB::table('customer_deposits')
+            ->select('deposit_history.*')
+            ->join('deposit_history', 'customer_deposits.id', '=', 'deposit_history.deposit_id')
+            ->where('customer_deposits.customer_id', $customerId)
+            ->where('deposit_history.deposit_id', $depositId)
+            ->when($fromDate, function ($query, $fromDate) {
+                return $query->whereDate('action_date','>=', $fromDate);
+            })            
+            ->orderBy('deposit_history.action_date', 'desc');
+            if($fromDate){
+                $history = $history->get();
+            }else{
+                $history = $history->take(10);
+                $history = $history->get();
+            }
+
+        return $history;
+    }
     // You can add any specific methods related to User here
 }

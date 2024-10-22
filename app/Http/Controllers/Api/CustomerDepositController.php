@@ -187,4 +187,45 @@ class CustomerDepositController extends Controller
         }
     }
 
+
+    public function depositHistory(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'customer_id' => 'required|integer|exists:customers,id',
+            'deposit_id' => 'required|integer|exists:customer_deposits,id',
+        ]);
+        
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+
+        try{
+
+            $fromDay = $request->from_day ?? null;
+            //get the previous date by the day count 
+            if($fromDay){
+                $fromDate = Carbon::now()->subDays($fromDay)->format('Y-m-d');
+            }else{
+                $fromDate = null;
+            }
+            
+            $collection = $this->customerDepositRepository->getdepositHistory($request->customer_id,$request->deposit_id,$fromDate);
+            if($collection->isEmpty())
+            {
+                return sendErrorResponse('Collection not found!', 404);
+            }
+            else
+            {
+                $responseData = 
+                [
+                    'collection' => $collection,
+                ];
+                return sendSuccessResponse('Collection found successfully!', 200, $responseData);
+            }
+        }
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
 }

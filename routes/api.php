@@ -62,11 +62,13 @@ Route::middleware('api')->group(function () {
         Route::post('updateappliedloan',[CustomerLoanController::class,'updateappliedloan']);
         Route::post('collectmoney',[LoanHistoryController::class,'store']);
         Route::post('today-collection',[LoanHistoryController::class,'getTodayCollection']);
+        Route::post('customer-loan-history', [CustomerLoanController::class, 'loanHistory']);
 
         //customerdeposit
         Route::post('create-customer-deposit', [CustomerDepositController::class, 'store']);
         Route::post('company-customer-deposits', [CustomerDepositController::class, 'index']);
         Route::post('collect-deposit-money', [DepositHistoryController::class, 'store']);
+        Route::post('customer-deposit-history', [CustomerDepositController::class, 'depositHistory']);
 
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);

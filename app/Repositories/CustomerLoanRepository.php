@@ -51,6 +51,26 @@ class CustomerLoanRepository extends BaseRepository
             ->distinct('customer_id')
             ->count('customer_id');
     }
+
+    public function getLoanHistory($customerId,$loanId,$fromDate){
+        $history = DB::table('customer_loans')
+            ->select('loan_history.*')
+            ->join('loan_history', 'customer_loans.id', '=', 'loan_history.loan_id')
+            ->where('customer_loans.customer_id', $customerId)
+            ->where('loan_history.loan_id', $loanId)
+            ->when($fromDate, function ($query, $fromDate) {
+                return $query->whereDate('loan_history.receive_date','>=', $fromDate);
+            })            
+            ->orderBy('loan_history.receive_date', 'desc');
+            if($fromDate){
+                $history = $history->get();
+            }else{
+                $history = $history->take(10);
+                $history = $history->get();
+            }
+
+        return $history;
+    }
     
 
     // You can add any specific methods related to User here

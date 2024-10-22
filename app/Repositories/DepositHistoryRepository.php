@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\DepositHistory;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class DepositHistoryRepository extends BaseRepository
@@ -24,11 +25,6 @@ class DepositHistoryRepository extends BaseRepository
             return $maxDate;
         else
             return null;
-    }
-
-    public function getTodayDepositCollection($memberId){
-        $data = $this->model->with('deposit.customer')->where('receiver_member_id', $memberId)->whereDate('action_date', carbon::today())->get();
-        return $data;
     }
     
     // You can add any specific methods related to User here
