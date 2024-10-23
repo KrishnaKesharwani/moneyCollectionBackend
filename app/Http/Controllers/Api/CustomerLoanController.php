@@ -142,6 +142,39 @@ class CustomerLoanController extends Controller
         }
     }
 
+    public function unassignedLoans(Request $request){
+
+        $inputData = [
+            'company_id' => 'required|exists:companies,id',
+        ];
+
+        $validator = Validator::make($request->all(), $inputData);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            $loanStatus = $request->loan_status ?? ['paid','approved'];
+            $loans = $this->customerLoanRepository->getAllmemberNotAssignedLoans($request->company_id,$loanStatus);
+            if($loans->isEmpty())
+            {
+                return sendErrorResponse('Loans not found!', 404);
+            }
+            else
+            {
+                $loanData = [
+                    'loans' => $loans,
+                ];
+                return sendSuccessResponse('Loans found successfully!', 200, $loanData);
+            }
+        }
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        }
+    }
+
     public function store(Request $request)
     {
         // Validate the request

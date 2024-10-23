@@ -38,6 +38,29 @@ class CustomerLoanRepository extends BaseRepository
         return $loans;
     }
 
+    /**
+     * Get all member not assigned loans
+     *
+     * @param int $company_id
+     * @param string|null $loanStatus
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+
+    public function getAllmemberNotAssignedLoans($company_id, $loanStatus =null)
+    {
+        $loans = $this->model
+                ->where('company_id', $company_id)
+                ->where('status', 'active')
+                ->where('assigned_member_id', 0)
+                ->when($loanStatus, function ($query, $loanStatus) {
+                    return $query->whereIn('loan_status', $loanStatus);
+                })
+                ->orderBy('id', 'desc')
+                ->get();
+
+        return $loans;
+    }
+
     public function getTotalAttendedCustomer($loanId){
         //get unique customer count
         return $this->model->whereIn('id', $loanId)->distinct('customer_id')->count();
