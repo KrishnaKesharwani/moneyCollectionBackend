@@ -506,4 +506,46 @@ class CustomerLoanController extends Controller
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
+
+    //remove member from loan
+    public function removeLoanMember(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'loan_id' => 'required|integer|exists:customer_loans,id',
+            'member_id' => 'required|integer|exists:members,id',
+        ]);
+        
+        if ($validator->fails())
+        {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+
+        try{            
+            $customerLoan   = $this->customerLoanRepository->find($request->loan_id);
+            if($customerLoan->assigned_member_id == $request->member_id)
+            {
+                DB::beginTransaction();
+                $customerLoan->assigned_member_id = 0;
+                if($customerLoan->save())
+                {
+                    //delete member from loan member history
+                    $this->loanMemberHistoryRepository->deleteMember(['loan_id' => $request->loan_id, 'member_id' => $request->member_id]);
+                    DB::commit();
+                    return sendSuccessResponse('Loan member removed successfully!', 200);
+                }
+                else
+                {   
+                    return sendErrorResponse('Loan member not removed!', 404);
+                }
+            }
+            else
+            {
+                return sendErrorResponse('This member not assigned to this loan!', 404);
+            }
+        }
+        catch (Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
 }
