@@ -84,7 +84,7 @@ class CustomerLoanRepository extends BaseRepository
             ->when($fromDate, function ($query, $fromDate) {
                 return $query->whereDate('loan_history.receive_date','>=', $fromDate);
             })            
-            ->orderBy('loan_history.receive_date', 'desc');
+            ->orderBy('loan_history.receive_date', 'asc');
             if($fromDate){
                 $history = $history->get();
             }else{

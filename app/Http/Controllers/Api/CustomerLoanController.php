@@ -476,7 +476,17 @@ class CustomerLoanController extends Controller
             }else{
                 $fromDate = null;
             }
-            
+            $loan       = $this->customerLoanRepository->getLoanById($request->loan_id);
+
+            $loanAmount = 0;
+            if(!$loan)
+            {
+                return sendErrorResponse('Loan not found!', 404);
+            }
+            else{
+                $loanAmount = $loan->loan_amount;
+            }
+
             $collection = $this->customerLoanRepository->getLoanHistory($request->customer_id,$request->loan_id,$fromDate);
             if($collection->isEmpty())
             {
@@ -484,9 +494,24 @@ class CustomerLoanController extends Controller
             }
             else
             {
+                $remainingAmount = $loanAmount;  // Initialize the remaining amount with the total loan amount
+                $i = 1;
+                foreach ($collection as $key => $value) {
+                    // Deduct the installment amount from the remaining amount
+                    if($i == 1){
+                        $collection[$key]->balance = (float)$loanAmount;
+                    }else{
+                        $remainingAmount -= $collection[$key - 1]->amount; 
+                        // Set the remaining amount for each collection entry
+                        $collection[$key]->balance = $remainingAmount;
+                    }
+                    $i++;
+                }                
+                // Sort the collection by 'created_at' in descending order using sortByDesc
+                $sortedCollection = $collection->sortByDesc('created_at')->values();
                 $responseData = 
                 [
-                    'collection' => $collection,
+                    'collection' => $sortedCollection,
                 ];
                 return sendSuccessResponse('Collection found successfully!', 200, $responseData);
             }

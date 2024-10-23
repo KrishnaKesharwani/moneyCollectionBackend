@@ -83,7 +83,7 @@ class CustomerDepositRepository extends BaseRepository
             ->when($fromDate, function ($query, $fromDate) {
                 return $query->whereDate('action_date','>=', $fromDate);
             })            
-            ->orderBy('deposit_history.action_date', 'desc');
+            ->orderBy('deposit_history.action_date', 'asc');
             if($fromDate){
                 $history = $history->get();
             }else{

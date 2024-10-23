@@ -217,9 +217,22 @@ class CustomerDepositController extends Controller
             }
             else
             {
+                $balance = 0;
+                foreach ($collection as $key => $value) {
+                    $collection[$key]->balance = $balance;
+                    if ($value->action_type == 'credit') {
+                        $balance += $value->amount;
+                    }
+                    // If action_type is 'debit', subtract the amount from the balance
+                    elseif ($value->action_type == 'debit') {
+                        $balance -= $value->amount;
+                    }
+                }
+
+                $sortedCollection = $collection->sortByDesc('created_at')->values();
                 $responseData = 
                 [
-                    'collection' => $collection,
+                    'collection' => $sortedCollection,
                 ];
                 return sendSuccessResponse('Collection found successfully!', 200, $responseData);
             }
