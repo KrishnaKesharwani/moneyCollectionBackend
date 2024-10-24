@@ -29,7 +29,8 @@ return new class extends Migration
             $table->string('owner_image')->nullable();
             $table->text('address')->nullable();
             $table->text('details')->nullable();
-            $table->integer('member_count')->default(0);
+            $table->integer('member_count')->default(100);
+            $table->integer('customer_count')->default(100);
             $table->timestamps();
             // Add soft deletes
             $table->softDeletes();

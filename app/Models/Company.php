@@ -30,6 +30,9 @@ class Company extends Model
         'details',
         'member_count',
         'customer_count',
+        'primary_color',
+        'secondary_color',
+        'prefix',
     ];
 
     protected $hidden = [

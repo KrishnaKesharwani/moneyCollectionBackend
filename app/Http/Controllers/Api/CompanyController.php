@@ -293,13 +293,16 @@ class CompanyController extends Controller
 
             if($company)
             {
-                $company->company_name  = $request->company_name;
-                $company->owner_name    = $request->owner_name;
-                $company->aadhar_no     = $request->aadhar_no;
-                $company->mobile        = $request->mobile;
-                $company->status        = $request->status;
-                $company->address       = $request->address;
-                $company->details       = $request->details;
+                $company->company_name      = $request->company_name;
+                $company->owner_name        = $request->owner_name;
+                $company->aadhar_no         = $request->aadhar_no;
+                $company->mobile            = $request->mobile;
+                $company->status            = $request->status;
+                $company->address           = $request->address;
+                $company->details           = $request->details;
+                $company->primary_color     = $request->primary_color ?? null;
+                $company->secondary_color   = $request->secondary_color ?? null;
+                $company->prefix            = $request->prefix ?? null;
                 // Process the base64 images
                 if($request->main_logo!='')
                 {

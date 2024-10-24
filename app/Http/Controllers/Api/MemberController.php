@@ -101,7 +101,10 @@ class MemberController extends Controller
             {
                 $companyName            = $company->company_name;
                 $companyprefix          = explode(' ', $companyName)[0];
-                $member_no              = $companyprefix.'-'.$company->id.'-'.$company->member_count + 1;
+                if($company->prefix) {
+                    $companyprefix = $company->prefix;
+                }
+                $member_no              = $companyprefix.'-MEM-'.$company->id.'-'.$company->member_count + 1;
                 $company->member_count  = $company->member_count + 1;
                 $company->save();
             }

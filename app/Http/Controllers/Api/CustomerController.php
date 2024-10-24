@@ -102,7 +102,12 @@ class CustomerController extends Controller
             {
                 $companyName                = $company->company_name;
                 $companyprefix              = explode(' ', $companyName)[0];
-                $customer_no                = $companyprefix.'-cus-'.$company->id.'-'.$company->customer_count + 1;
+                if($company->prefix)
+                {
+                    $companyprefix = $company->prefix;
+                }
+                
+                $customer_no                = $companyprefix.'-'.$company->id.'-'.$company->customer_count + 1;
             }
 
             $checkUser = User::where('email', $request->customer_login_id)
