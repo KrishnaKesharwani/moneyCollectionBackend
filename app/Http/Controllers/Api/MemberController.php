@@ -101,7 +101,7 @@ class MemberController extends Controller
             {
                 $companyName            = $company->company_name;
                 $companyprefix          = explode(' ', $companyName)[0];
-                if($company->prefix) {
+                if($company->prefix!=null && $company->prefix!=''){
                     $companyprefix = $company->prefix;
                 }
                 $member_no              = $companyprefix.'-MEM-'.$company->id.'-'.$company->member_count + 1;
@@ -128,28 +128,30 @@ class MemberController extends Controller
 
 
             //create user for member
+            $user = $this->userRepository->create([
+                'name' => $request->name,
+                'user_type' => 2,  // 1 for company
+                'email' => $request->member_login_id,  // Unique identifier for user
+                'mobile' => $request->mobile,
+                'password' => Hash::make($request->password),  // Hash the password
+                'password_hint' => $request->password,
+                'status' => $request->status,
+            ]);
 
             // Process the base64 images
             $validatedData['image']     = $this->storeBase64Image($request->image, 'member');
-            //$validatedData['user_id']   = $user->id;
+            $validatedData['user_id']   = $user->id;
             $validatedData['member_no'] = $member_no;
             $cleanTimeString            = preg_replace('/\s*\(.*\)$/', '', $request->join_date);
             $validatedData['join_date'] = Carbon::parse($cleanTimeString)->format('Y-m-d');
 
             // Store the company data in the database
             $member = $this->memberRepository->create($validatedData);
+            DB::commit();
 
             // Check if the company was successfully created
             if ($member)
             {   
-                $user = $this->createUser($request);
-                if($user)
-                {
-                    $member->user_id = $user->id;
-                    $member->save();
-                }
-                DB::commit();
-
                 $memberData = $this->memberRepository->getById($member->id);
                 return sendSuccessResponse('Member created successfully!', 201, $memberData);
             }
@@ -208,7 +210,7 @@ class MemberController extends Controller
             }
 
             // Process the base64 images
-            if($request->image!=''){
+            if($request->image!='' && $request->image!='null') {
                 $validatedData['image']     = $this->storeBase64Image($request->image, 'member');
             }
 

@@ -102,7 +102,7 @@ class CustomerController extends Controller
             {
                 $companyName                = $company->company_name;
                 $companyprefix              = explode(' ', $companyName)[0];
-                if($company->prefix)
+                if($company->prefix!=null && $company->prefix!='') 
                 {
                     $companyprefix = $company->prefix;
                 }

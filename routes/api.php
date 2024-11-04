@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\CustomerLoanController;
 use App\Http\Controllers\Api\CustomerDepositController;
 use App\Http\Controllers\Api\LoanHistoryController;
 use App\Http\Controllers\Api\DepositHistoryController;
+use App\Http\Controllers\Api\MemberFinanceController;
 
 
 /*
@@ -46,6 +47,9 @@ Route::middleware('api')->group(function () {
         Route::post('updatemember', [MemberController::class, 'update']);
         Route::post('members', [MemberController::class, 'index']);
         Route::put('updatememberstatus', [MemberController::class, 'updateMemberStatus']);
+
+        //memberFinance
+        Route::post('pay-advance-to-member', [MemberFinanceController::class, 'store']);
 
         //customer
         Route::post('createcustomer', [CustomerController::class, 'store']);

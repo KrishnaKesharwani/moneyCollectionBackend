@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use App\Repositories\DepositHistoryRepository;
 use App\Repositories\MemberRepository;
 use App\Repositories\CustomerDepositRepository;
+use App\Repositories\MemberFinanceHistoryRepository;
+use App\Repositories\MemberFinanceRepository;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use exception;
@@ -18,15 +20,21 @@ class DepositHistoryController extends Controller
     protected $depositHistoryRepository;
     protected $memberRepository;
     protected $customerDepositRepository;
+    protected $memberFinanceHistoryRepository;
+    protected $memberFinanceRepository;
     public function __construct(
         DepositHistoryRepository $depositHistoryRepository,
         MemberRepository $memberRepository,
-        CustomerDepositRepository $customerDepositRepository
+        CustomerDepositRepository $customerDepositRepository,
+        MemberFinanceHistoryRepository $memberFinanceHistoryRepository,
+        MemberFinanceRepository $memberFinanceRepository
         )
     {
         $this->depositHistoryRepository = $depositHistoryRepository;
         $this->memberRepository = $memberRepository;
         $this->customerDepositRepository = $customerDepositRepository;
+        $this->memberFinanceHistoryRepository = $memberFinanceHistoryRepository;
+        $this->memberFinanceRepository = $memberFinanceRepository;
     }
 
 
@@ -71,7 +79,7 @@ class DepositHistoryController extends Controller
         $totalRecievedAmount    = $this->depositHistoryRepository->getTotalDepositAmount($request->deposit_id, 'debit');
         $remainingAmount        = $totalPaidAmount - $totalRecievedAmount;
 
-        if($request->amount>$remainingAmount && $request->deposit_type == 'debit')
+        if($request->amount>$remainingAmount && $request->deposit_type == 'debit' && $member->balance < $request->amount)
         {
             return sendErrorResponse('Requested Amount is greater than remaining amount!', 422);
         }
@@ -88,6 +96,67 @@ class DepositHistoryController extends Controller
         
         if($depositHistory)
         {
+
+            $checkDate = Carbon::now()->format('Y-m-d');
+
+            // update member finance
+            $memberFinance = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,$checkDate,'working');
+            if($memberFinance)
+            {
+                if($request->deposit_type == 'debit')
+                {
+                    $memberFinance->balance = $memberFinance->balance - $request->amount;
+                }
+                else
+                {
+                    $memberFinance->balance = $memberFinance->balance + $request->amount;
+                }
+                $memberFinance->save();
+            }
+            else
+            {
+                if($request->deposit_type == 'debit'){
+                    $balance = $member->balance - $request->amount;
+                }else
+                {
+                    $balance = $member->balance + $request->amount;
+                }
+                $memberFinance = $this->memberFinanceRepository->create([
+                    'member_id' => $memberId,
+                    'company_id' => $member->company_id,
+                    'collect_date' => $receiveDate,
+                    'balance' => $balance
+                ]);
+
+                $memberData = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,null,'working');
+                if($memberData)
+                {
+                    $this->memberFinanceRepository->updateMemberFinance($memberId, $member->company_id,$checkDate);
+                }
+            }
+
+            //update member finance history
+            $this->memberFinanceHistoryRepository->create([
+                'member_finance_id' => $memberFinance->id,
+                'amount' => $request->amount,
+                'amount_by' => 'deposit',
+                'amount_by_id' => $request->deposit_id,
+                'amount_type' => $request->deposit_type,
+                'amount_date' => $receiveDate
+            ]);
+
+            //update Member balance
+            if($member){
+                if($request->deposit_type == 'debit')
+                {
+                    $member->balance = $member->balance - $request->amount;
+                }else
+                {
+                    $member->balance = $member->balance + $request->amount;
+                }
+                $member->save();
+            }
+            
             if($request->deposit_type == 'credit')
             {
                 $message = 'Amount credit successfully!';

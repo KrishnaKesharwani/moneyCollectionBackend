@@ -149,7 +149,7 @@ class CustomerDepositController extends Controller
             $validatedData['created_by']                = auth()->user()->id;
             $validatedData['status']                    = $request->status ?? 'active';
             $validatedData['assigned_member_id']        = $request->assigned_member_id ?? 0;
-
+            
             // Store the company data in the database
             $customerDeposit = $this->customerDepositRepository->create($validatedData);
 

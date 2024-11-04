@@ -14,11 +14,10 @@ return new class extends Migration
         Schema::create('loan_member_history', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('loan_id');
-            $table->unsignedBigInteger('member_id');
+            $table->integer('member_id');
             $table->date('assigned_date');
             $table->integer('assigned_by');
             $table->foreign('loan_id')->references('id')->on('customer_loans')->onDelete('cascade');
-            $table->foreign('member_id')->references('id')->on('members')->onDelete('cascade');
             $table->softDeletes();
             $table->timestamps();
         });
