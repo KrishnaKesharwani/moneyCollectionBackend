@@ -18,6 +18,7 @@ class MemberFinanceHistory extends Model
         'amount',
         'amount_by',
         'amount_by_id',
+        'customer_id',
         'amount_type',
         'amount_date',
         'details'
@@ -27,5 +28,10 @@ class MemberFinanceHistory extends Model
         'updated_at',
         'deleted_at'
     ];
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_id', 'id')->select('id','customer_no','name', 'image', 'mobile');
+    }
 
 }

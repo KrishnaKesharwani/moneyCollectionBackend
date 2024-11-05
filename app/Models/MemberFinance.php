@@ -20,12 +20,19 @@ class MemberFinance extends Model
         'balance',
         'paid_amount',
         'payment_status',
-        'remaining_amount'
+        'remaining_amount',
+        'previous_balance',
+        'details',
     ];
 
     protected $hidden = [
         'created_at',
         'updated_at',
     ];
+
+    public function member()
+    {
+        return $this->belongsTo(Member::class)->select('id','member_no','name', 'image');
+    }   
 
 }

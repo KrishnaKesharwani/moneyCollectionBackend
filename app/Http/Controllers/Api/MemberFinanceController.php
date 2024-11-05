@@ -107,5 +107,72 @@ class MemberFinanceController extends Controller
         DB::commit();
         return sendSuccessResponse('Advance Paid successfully!', 201, $memberFinanceHistory);
     }
-}
 
+    public function getCollections(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required|integer|exists:companies,id',
+        ]);
+        
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try
+        {
+            $filterDate = null;
+            if($request->date && $request->date != 'null')
+            {
+                $date           = preg_replace('/\s*\(.*\)$/', '', $request->date);
+                $filterDate     = Carbon::parse($date)->format('Y-m-d');    
+            }
+
+            $collections = $this->memberFinanceRepository->getCollection($request->company_id,$filterDate);
+
+            if($collections)
+            {
+                foreach ($collections as $key => $value) {
+                    $memberFinanceId = $value->id;
+                    $customerCount = $this->memberFinanceHistoryRepository->getCustomerCount($memberFinanceId);
+                    $value->customer_count = $customerCount;
+                }
+                return sendSuccessResponse('Collections found successfully!', 200, $collections);
+            }
+            else
+            {
+                return sendErrorResponse('Collections not found!', 404);
+            }
+            
+        }catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
+
+    public function collectionDetails(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'collection_id' => 'required|integer|exists:member_finance,id',
+        ]);
+        
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try
+        {
+            $details = $this->memberFinanceHistoryRepository->getCollectionDetails($request->collection_id);
+
+            if($details)
+            {
+                return sendSuccessResponse('Collection details found successfully!', 200, $details);
+            }
+            else
+            {
+                return sendErrorResponse('Collection details not found!', 404);
+            }
+            
+        }catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
+}

@@ -113,7 +113,8 @@ class LoanHistoryController extends Controller
                     'member_id' => $memberId,
                     'company_id' => $member->company_id,
                     'collect_date' => $checkDate,
-                    'balance' => $member->balance + $request->amount
+                    'balance' => $member->balance + $request->amount,
+                    'previous_balance' => $member->balance,
                 ]);
                 
                 $memberData = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,null,'working');
@@ -129,6 +130,7 @@ class LoanHistoryController extends Controller
                 'amount' => $request->amount,
                 'amount_by' => 'loan',
                 'amount_by_id' => $request->loan_id,
+                'customer_id' => $loan->customer_id,
                 'amount_type' => 'credit',
                 'amount_date' => $receiveDate
             ]);

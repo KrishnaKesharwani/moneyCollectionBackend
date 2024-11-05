@@ -125,7 +125,8 @@ class DepositHistoryController extends Controller
                     'member_id' => $memberId,
                     'company_id' => $member->company_id,
                     'collect_date' => $receiveDate,
-                    'balance' => $balance
+                    'balance' => $balance,
+                    'previous_balance' => $member->balance
                 ]);
 
                 $memberData = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,null,'working');
@@ -141,6 +142,7 @@ class DepositHistoryController extends Controller
                 'amount' => $request->amount,
                 'amount_by' => 'deposit',
                 'amount_by_id' => $request->deposit_id,
+                'customer_id' => $deposit->customer_id,
                 'amount_type' => $request->deposit_type,
                 'amount_date' => $receiveDate
             ]);

@@ -35,4 +35,15 @@ class MemberFinanceRepository extends BaseRepository
             ->whereDate('collect_date','!=', $reciveDate)
             ->update(['payment_status' => 'unpaid']);
     }
+
+    public function getCollection($companyId, $collectDate=null)
+    {
+        return $this->model->with('member')->where('company_id', $companyId)
+            ->when($collectDate, function ($query, $collectDate) {
+                return $query->whereDate('collect_date', $collectDate);
+            })
+            ->orderBy('id', 'desc')
+            ->get();
+    }
+
 }
