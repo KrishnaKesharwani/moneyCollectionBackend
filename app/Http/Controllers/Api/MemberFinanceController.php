@@ -175,4 +175,54 @@ class MemberFinanceController extends Controller
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
+
+    public function payCollection(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'collection_id' => 'required|integer|exists:member_finance,id',
+            'amount' => 'required|numeric|min:1',
+        ]);
+        
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try
+        {
+            $collection = $this->memberFinanceRepository->find($request->collection_id);
+            if(!$collection && $collection->payment_status != 'working')
+            {
+                return sendErrorResponse('Collection not found!', 404);
+            }
+            $remainingAmount = $collection->balance - $request->amount;
+
+            DB::beginTransaction();
+            $updateData = [
+                'paid_amount' => $request->amount,
+                'payment_status' => 'paid',
+                'remaining_amount' => $remainingAmount,
+                'details' => $request->details
+            ];
+
+            $details = $this->memberFinanceRepository->update($request->collection_id,$updateData);
+
+            if($details)
+            {
+                //update member balance
+                $member = $this->memberRepository->find($collection->member_id);
+                $memberBalance = $member->balance;
+                $member->balance = $memberBalance - $request->amount;
+                $member->save();
+                DB::commit();
+                return sendSuccessResponse('Collection details found successfully!', 200, $details);
+            }
+            else
+            {
+                return sendErrorResponse('Collection details not found!', 404);
+            }
+            
+        }catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
 }

@@ -78,10 +78,14 @@ class DepositHistoryController extends Controller
         $totalPaidAmount        = $this->depositHistoryRepository->getTotalDepositAmount($request->deposit_id, 'credit');
         $totalRecievedAmount    = $this->depositHistoryRepository->getTotalDepositAmount($request->deposit_id, 'debit');
         $remainingAmount        = $totalPaidAmount - $totalRecievedAmount;
-
-        if($request->amount>$remainingAmount && $request->deposit_type == 'debit' && $member->balance < $request->amount)
+        
+        if($request->amount > $remainingAmount && $request->deposit_type == 'debit')
         {
-            return sendErrorResponse('Requested Amount is greater than remaining amount!', 422);
+            return sendErrorResponse('Customer does not have enough deposit!', 422);
+        }
+        elseif($request->deposit_type == 'debit' && $member->balance < $request->amount)
+        {
+            return sendErrorResponse('Member balance not enough!', 422);
         }
         
         $receiveDate    = Carbon::now()->format('Y-m-d H:i:s');

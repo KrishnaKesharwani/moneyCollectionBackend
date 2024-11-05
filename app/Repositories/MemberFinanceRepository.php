@@ -21,7 +21,7 @@ class MemberFinanceRepository extends BaseRepository
                 return $query->whereDate('collect_date', $collectDate);
             })
             ->when($paymentStatus, function ($query, $paymentStatus) {
-                return $query->whereDate('payment_status', $paymentStatus);
+                return $query->where('payment_status', $paymentStatus);
             })
             ->first();
     }

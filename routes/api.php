@@ -52,6 +52,7 @@ Route::middleware('api')->group(function () {
         Route::post('pay-advance-to-member', [MemberFinanceController::class, 'store']);
         Route::post('get-collections', [MemberFinanceController::class, 'getCollections']);
         Route::post('get-collection-details', [MemberFinanceController::class, 'collectionDetails']);
+        Route::post('pay-collection', [MemberFinanceController::class, 'payCollection']);
 
         //customer
         Route::post('createcustomer', [CustomerController::class, 'store']);
