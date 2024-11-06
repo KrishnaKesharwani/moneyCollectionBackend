@@ -55,15 +55,7 @@ class CustomerLoanController extends Controller
             'company_id' => 'required|exists:companies,id',
         ];
 
-        if(auth()->user()->user_type == 3)
-        {
-            $inputData['customer_id'] = 'required|exists:customers,id';
-        }
-
-        if(auth()->user()->user_type == 2)
-        {
-            $inputData['member_id'] = 'required|exists:members,id';
-        }
+    
 
         $validator = Validator::make($request->all(), $inputData);
         
