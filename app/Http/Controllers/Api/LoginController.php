@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Company;
 use App\Models\Member;
 use App\Models\Customer;
+use App\Models\Offer;
 use Illuminate\Support\Facades\Validator;
 use App\Repositories\UserRepository;
 
@@ -65,6 +66,7 @@ class LoginController extends Controller
             $userData['company']    = null;
             $userData['member']     = null;
             $userData['customer']   = null;
+            $userData['offer']      = null;
             if($userType==1){
                 $company = Company::where('user_id', $userId)->first();
                 if($company){
@@ -75,12 +77,14 @@ class LoginController extends Controller
                 if($member){
                     $userData['member'] = $member;
                     $userData['company'] = Company::where('id', $member->company_id)->first();
+                    $userData['offer'] = Offer::where('default_offer',1)->where('company_id',$member->company_id)->first();
                 }
             }elseif($userType==3){
                 $customer = Customer::where('user_id', $userId)->first();
                 if($customer){
                     $userData['customer'] = $customer;
                     $userData['company'] = Company::where('id', $customer->company_id)->first();
+                    $userData['offer'] = Offer::where('default_offer',1)->where('company_id',$customer->company_id)->first();
                 }
             }
         }

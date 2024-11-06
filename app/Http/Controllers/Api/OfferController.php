@@ -56,7 +56,7 @@ class OfferController extends Controller
         // Validate the request
 
         $validator = Validator::make($request->all(), [
-            'company_id' => 'required |interger|exists:companies,id',
+            'company_id' => 'required |integer|exists:companies,id',
             'name'  => 'required |string',
             'type' => 'required|string',
             'image' => 'nullable|string',
@@ -91,7 +91,7 @@ class OfferController extends Controller
                 // Set default offer flag to 0 for all the offers except the given offer id
                 if(isset($request->default_offer) && $request->default_offer==1)
                 {
-                    $this->offerRepository->updateDefaultOffer($offer->id);
+                    $this->offerRepository->updateDefaultOffer($offer->id,$offer->company_id);
                 }
                 DB::commit();
                 return sendSuccessResponse('Offer created successfully!', 201, $offer);
@@ -152,7 +152,7 @@ class OfferController extends Controller
                 // Set default offer flag to 0 for all the offers except the given offer id
                 if(isset($request->default_offer) && $request->default_offer==1)
                 {
-                    $this->offerRepository->updateDefaultOffer($request->offer_id);
+                    $this->offerRepository->updateDefaultOffer($request->offer_id,$request->company_id);
                 }
                 DB::commit();
                 return sendSuccessResponse('Offer updated successfully!', 201, $offer);
@@ -167,4 +167,80 @@ class OfferController extends Controller
         }
     }
     
+
+    public function updateOfferStatus(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            'offer_id' => 'required',
+            'status' => 'required',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $offer = $this->offerRepository->find($request->offer_id);
+        if($offer)
+        {
+            DB::beginTransaction();
+            
+            $offer->status = $request->status;
+            $offer->save();
+
+            DB::commit();
+            $offerData = $this->offerRepository->find($offer->id);
+            if($request->status=='active')
+            {
+                return sendSuccessResponse('Offer Activated successfully!',200,$offerData);
+            }else{
+                return sendSuccessResponse('Offer Inactived successfully!',200,$offerData);
+            }
+        }
+        else
+        {
+            return sendErrorResponse('Offer not found!', 404);
+        }
+    }
+
+    public function updateDefaultOffer(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            'offer_id' => 'required',
+            'default_offer' => 'required',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $offer = $this->offerRepository->find($request->offer_id);
+        if($offer)
+        {
+            DB::beginTransaction();
+            
+            $offer->default_offer = $request->default_offer;
+            $offer->save();
+
+            // Set default offer flag to 0 for all the offers except the given offer id
+            if(isset($request->default_offer) && $request->default_offer==1)
+            {
+                $this->offerRepository->updateDefaultOffer($request->offer_id,$offer->company_id);
+            }
+
+            DB::commit();
+            $offerData = $this->offerRepository->find($offer->id);
+            if($request->default_offer==1)
+            {
+                return sendSuccessResponse('Offer set default successfully!',200,$offerData);
+            }else{
+                return sendSuccessResponse('Offer removed from default!',200,$offerData);
+            }
+        }
+        else
+        {
+            return sendErrorResponse('Offer not found!', 404);
+        }
+    }
 }

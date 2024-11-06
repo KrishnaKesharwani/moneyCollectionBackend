@@ -30,7 +30,7 @@ class OfferRepository extends BaseRepository
      * 
      * @return void
      */
-    public function updateDefaultOffer($offerId){
-        return $this->model->where('id','!=',$offerId)->update(['default_offer' => 0]);
+    public function updateDefaultOffer($offerId,$companyId){
+        return $this->model->where('id','!=',$offerId)->where('company_id',$companyId)->update(['default_offer' => 0]);
     }
 }

@@ -85,6 +85,8 @@ Route::middleware('api')->group(function () {
         Route::post('create-offer', [OfferController::class, 'store']);
         Route::post('update-offer', [OfferController::class, 'update']);
         Route::post('offers', [OfferController::class, 'index']);
+        Route::put('update-offer-status',[OfferController::class,'updateOfferStatus']);
+        Route::put('update-default-offer',[OfferController::class,'updateDefaultOffer']);
         
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);
