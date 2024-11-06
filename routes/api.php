@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\CustomerDepositController;
 use App\Http\Controllers\Api\LoanHistoryController;
 use App\Http\Controllers\Api\DepositHistoryController;
 use App\Http\Controllers\Api\MemberFinanceController;
+use App\Http\Controllers\Api\OfferController;
 
 
 /*
@@ -80,6 +81,11 @@ Route::middleware('api')->group(function () {
         Route::post('customer-deposit-history', [CustomerDepositController::class, 'depositHistory']);
         Route::post('change-deposit-member', [CustomerDepositController::class, 'changeDepositMember']);
 
+        //offers
+        Route::post('create-offer', [OfferController::class, 'store']);
+        Route::post('update-offer', [OfferController::class, 'update']);
+        Route::post('offers', [OfferController::class, 'index']);
+        
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);
     });

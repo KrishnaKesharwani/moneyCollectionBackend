@@ -98,10 +98,10 @@ class CustomerLoanController extends Controller
                     $loan->total_paid = $paidAmount;
                     $remaingAmount = $loan->loan_amount - $paidAmount;
                     $loan->remaining_amount = $remaingAmount;
-                    if($loan->loan_status == 'paid'){
+                    //if($loan->loan_status == 'paid'){
                         $totalRemaingAmount = $totalRemaingAmount + $remaingAmount;
                         $totalCustomer[] = $loan->customer_id;
-                    }
+                    //}
 
                     $loan->paid_today = 'no';
                     $loanMaxDate = $this->loanHistoryRepository->getMaxLoanHistoryDate($loan->id);
