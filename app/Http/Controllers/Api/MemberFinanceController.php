@@ -73,7 +73,7 @@ class MemberFinanceController extends Controller
         {
             $memberFinance = $this->memberFinanceRepository->create([
                 'member_id' => $memberId,
-                'company_id' => $company_id,
+                'company_id' => $companyId,
                 'collect_date' => $checkDate,
                 'balance' => $member->balance + $request->amount
             ]);

@@ -20,7 +20,7 @@ class DepositHistoryRepository extends BaseRepository
 
 
     public function getMaxDepositHistoryDate($depositId){
-        $maxDate = $this->model->where('Deposit_id', $depositId)->where('action_type', 'credit')->max('action_date');
+        $maxDate = $this->model->where('deposit_id', $depositId)->where('action_type', 'credit')->max('action_date');
         if($maxDate)
             return $maxDate;
         else

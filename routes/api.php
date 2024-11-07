@@ -15,7 +15,8 @@ use App\Http\Controllers\Api\LoanHistoryController;
 use App\Http\Controllers\Api\DepositHistoryController;
 use App\Http\Controllers\Api\MemberFinanceController;
 use App\Http\Controllers\Api\OfferController;
-
+use App\Http\Controllers\Api\FixedDepositController;
+use App\Http\Controllers\Api\FixedDepositHistoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -87,6 +88,13 @@ Route::middleware('api')->group(function () {
         Route::post('offers', [OfferController::class, 'index']);
         Route::put('update-offer-status',[OfferController::class,'updateOfferStatus']);
         Route::put('update-default-offer',[OfferController::class,'updateDefaultOffer']);
+
+        //fixed deposit
+        Route::post('create-fixed-deposit', [FixedDepositController::class, 'store']);
+        Route::post('update-fixed-deposit', [FixedDepositController::class, 'update']);
+        Route::post('fixed-deposits', [FixedDepositController::class, 'index']);
+        Route::post('pay-fixed-deposit-money', [FixedDepositHistoryController::class, 'store']);
+        //Route::post('fixed-deposit-history', [CustomerDepositController::class, 'fixedDepositHistory']);
         
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);
