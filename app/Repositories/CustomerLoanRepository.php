@@ -102,5 +102,21 @@ class CustomerLoanRepository extends BaseRepository
     }
     
 
+    public function getTotalLoanAmount($company_id){
+        return $this->model->totalLoanAmount($company_id)->sum('loan_amount');
+    }
+
+    public function getRunningLoanIds($company_id){
+        return $this->model->totalLoanAmount($company_id)->pluck('id');
+    }
+
+    public function getTotalCustomer($company_id, $loanStatus){
+        return $this->model
+            ->where('company_id', $company_id)
+            ->where('loan_status', $loanStatus)
+            ->where('status', 'active')
+            ->distinct('customer_id')
+            ->count('customer_id');
+    }
     // You can add any specific methods related to User here
 }

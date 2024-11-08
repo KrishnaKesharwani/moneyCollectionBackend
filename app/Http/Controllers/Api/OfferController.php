@@ -89,7 +89,7 @@ class OfferController extends Controller
             if ($offer)
             {   
                 // Set default offer flag to 0 for all the offers except the given offer id
-                if(isset($request->default_offer) && $request->default_offer==1)
+                if(isset($request->default_offer) && $request->default_offer==true)
                 {
                     $this->offerRepository->updateDefaultOffer($offer->id,$offer->company_id);
                 }
@@ -150,7 +150,7 @@ class OfferController extends Controller
             if ($offer)
             {   
                 // Set default offer flag to 0 for all the offers except the given offer id
-                if(isset($request->default_offer) && $request->default_offer==1)
+                if(isset($request->default_offer) && $request->default_offer==true)
                 {
                     $this->offerRepository->updateDefaultOffer($request->offer_id,$request->company_id);
                 }
@@ -219,12 +219,16 @@ class OfferController extends Controller
         if($offer)
         {
             DB::beginTransaction();
-            
-            $offer->default_offer = $request->default_offer;
+            $defaultOffer = 0;
+            if($request->default_offer==true)
+            {
+                $defaultOffer = 1;
+            }
+            $offer->default_offer = $defaultOffer;
             $offer->save();
 
             // Set default offer flag to 0 for all the offers except the given offer id
-            if(isset($request->default_offer) && $request->default_offer==1)
+            if(isset($request->default_offer) && $defaultOffer==1)
             {
                 $this->offerRepository->updateDefaultOffer($request->offer_id,$offer->company_id);
             }

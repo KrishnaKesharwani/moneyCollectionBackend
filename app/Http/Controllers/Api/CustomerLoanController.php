@@ -748,4 +748,50 @@ class CustomerLoanController extends Controller
             return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
         }
     }
+
+    public function companyDashboardLoanStatus(Request $request){
+
+        $inputData = [
+            'company_id' => 'required|exists:companies,id',
+        ];
+
+        $validator = Validator::make($request->all(), $inputData);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            $totalLoanAmount    = $this->customerLoanRepository->getTotalLoanAmount($request->company_id);
+            $loanIds            = $this->customerLoanRepository->getRunningLoanIds($request->company_id);
+            $totalCustomerCount = $this->customerLoanRepository->getTotalCustomer($request->company_id,'paid');
+            if(count($loanIds) > 0)
+            {
+                $totalPaidAmount = $this->loanHistoryRepository->getTotalPaidAmountByLoanIds($loanIds);
+                $totalRemaingAmount = $totalLoanAmount - $totalPaidAmount;
+                //get the percentage of paid amount
+                $percentage = ($totalPaidAmount / $totalLoanAmount) * 100;
+                //get the percentage of remaining amount
+                $remainingPercentage = ($totalRemaingAmount / $totalLoanAmount) * 100;
+
+                $loanData = [
+                    'total_loan_amount' => (float)$totalLoanAmount,
+                    'total_paid_amount' => (float)$totalPaidAmount,
+                    'total_remaining_amount' => $totalRemaingAmount,
+                    'total_cusotomer' => $totalCustomerCount,
+                    'paid_percentage' => $percentage,
+                    'remaining_percentage' => $remainingPercentage 
+                ];
+                return sendSuccessResponse('Loans found successfully!', 200, $loanData);
+            }
+            else
+            {
+                return sendErrorResponse('Loans not found!', 404);
+            }
+        }
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        }
+    }
 }

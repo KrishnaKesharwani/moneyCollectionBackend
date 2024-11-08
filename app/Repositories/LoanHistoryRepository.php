@@ -17,6 +17,10 @@ class LoanHistoryRepository extends BaseRepository
         return $this->model->where('loan_id', $loanId)->sum('amount');
     }
 
+    public function getTotalPaidAmountByLoanIds($loanId){
+        return $this->model->whereIn('loan_id', $loanId)->sum('amount');
+    }
+
     public function getMaxLoanHistoryDate($loanId){
         $maxDate = $this->model->where('loan_id', $loanId)->max('receive_date');
         if($maxDate)

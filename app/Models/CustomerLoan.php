@@ -59,4 +59,11 @@ class CustomerLoan extends Model
     {
         return $this->hasMany(LoanHistory::class, 'loan_id');
     }
+
+    public function scopeTotalLoanAmount($query, $companyId)
+    {
+        return $query->where('company_id', $companyId)
+                 ->where('status', 'active')
+                 ->where('loan_status', 'paid');
+    }
 }
