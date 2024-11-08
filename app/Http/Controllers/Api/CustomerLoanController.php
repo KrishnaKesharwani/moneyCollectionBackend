@@ -598,4 +598,62 @@ class CustomerLoanController extends Controller
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
+
+
+    /**
+     * Update loan status by given loan id
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function updateLoanStatus(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            'loan_id' => 'required|integer|exists:customer_loans,id',
+            'loan_status' => 'required',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            DB::beginTransaction();
+            //update user status
+            $loanId = $request->loan_id;
+            $updateLoanData = [
+                'loan_status' => $request->loan_status,
+                'loan_status_message' => $request->reason ?? null,
+                'loan_status_changed_by' => auth()->user()->id,
+                'loan_status_change_date' => Carbon::now()->format('Y-m-d H:i:s'),
+            ];
+            $loan = $this->customerLoanRepository->update($loanId,$updateLoanData);
+
+            if($loan)
+            {
+                $statusData = [
+                    'loan_id' => $loanId,
+                    'loan_status' => $request->loan_status,
+                    'loan_status_message' => $request->reason ?? null,
+                    'loan_status_changed_by' => auth()->user()->id,
+                    'loan_status_change_date' => Carbon::now()->format('Y-m-d H:i:s')
+                ];
+
+                $statusHistory = $this->loanStatusHistoryRepository->create($statusData);
+
+                DB::commit();
+                $loanData = $this->customerLoanRepository->find($loanId);
+                return sendSuccessResponse('Loan status updated successfully!',200,$loanData);
+            }
+            else
+            {
+                return sendErrorResponse('Loan status not updated',422);
+            }
+        }
+        catch (Exception $e)
+        {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
 }
