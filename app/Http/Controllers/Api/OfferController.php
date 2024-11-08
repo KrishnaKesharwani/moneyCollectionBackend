@@ -75,9 +75,9 @@ class OfferController extends Controller
             DB::beginTransaction();
             // Process the base64 images
             $validatedData['image']            = storeBase64Image($request->image, 'offers');
-            if(isset($request->default_offer))
+            if(isset($request->default_offer) && $request->default_offer==true)
             {
-                $validatedData['default_offer']    = $request->default_offer ?? 0;
+                $validatedData['default_offer']    = 1;
             }
             else{
                 $validatedData['default_offer']    = 0;
@@ -136,9 +136,9 @@ class OfferController extends Controller
                 unset($validatedData['image']);
             }
 
-            if(isset($request->default_offer))
+            if(isset($request->default_offer) && $request->default_offer==true)
             {
-                $validatedData['default_offer']    = $request->default_offer ?? 0;
+                $validatedData['default_offer']    = 1;
             }
             else{
                 $validatedData['default_offer']    = 0;

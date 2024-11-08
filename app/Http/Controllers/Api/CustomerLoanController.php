@@ -656,4 +656,96 @@ class CustomerLoanController extends Controller
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
+
+    public function completedLoanList(Request $request){
+
+        $inputData = [
+            'company_id' => 'required|exists:companies,id',
+        ];
+
+    
+
+        $validator = Validator::make($request->all(), $inputData);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            $status = $request->status ?? 'active';
+            $loanStatus = $request->loan_status ?? 'completed';
+            $member = $request->member_id ?? null;
+            $customer = $request->customer_id ?? null;
+            //set current month if month value is null
+            $month = $request->month ?? carbon::now()->month;
+            //set current year if year value is null
+            $year = $request->year ?? carbon::now()->year;
+            //get the date of the first day and last day according to this month and year
+            $startDate = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
+            $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth()->format('Y-m-d');
+            $loans = $this->customerLoanRepository->getAllCustomerLoans($request->company_id,$loanStatus,$status,$member,$customer,$startDate,$endDate);
+            if($loans->isEmpty())
+            {
+                return sendErrorResponse('Loans not found!', 404);
+            }
+            else
+            {
+                $totalRemaingAmount = 0;
+                $totalCustomer = [];
+
+                foreach($loans as $loan)
+                {
+                    $paidAmount = $this->loanHistoryRepository->getTotalPaidAmount($loan->id);
+                    $loan->applied_user_name = '';
+                    if($loan->apply_date!=null){
+                        if($loan->applied_user_type==3){
+                            $loan->applied_user_name = 'self';
+                        }
+                        if($loan->applied_user_type==2){
+                            $member = $this->memberRepository->getMemberByUserId($loan->applied_by);
+                            if($member)
+                            {
+                                $loan->applied_user_name = $member->name;
+                            }
+                        }
+                    }
+                    $loan->total_paid = $paidAmount;
+                    $remaingAmount = $loan->loan_amount - $paidAmount;
+                    $loan->remaining_amount = $remaingAmount;
+                    //if($loan->loan_status == 'paid'){
+                        $totalRemaingAmount = $totalRemaingAmount + $remaingAmount;
+                        $totalCustomer[] = $loan->customer_id;
+                    //}
+
+                    $loan->paid_today = 'no';
+                    $loanMaxDate = $this->loanHistoryRepository->getMaxLoanHistoryDate($loan->id);
+                    if($loanMaxDate)
+                    {
+                        //convert loan max date to carbon Y-m-d format
+                        $loanMaxDate = Carbon::parse($loanMaxDate)->format('Y-m-d');
+                        if($loanMaxDate == Carbon::now()->format('Y-m-d'))
+                        {
+                            $loan->paid_today = 'yes';
+                        }
+                    }
+                }
+
+                $totalCustomerCount = 0;
+                if(!empty($totalCustomer)){
+                    $totalCustomer = array_unique($totalCustomer);
+                    $totalCustomerCount = count($totalCustomer);
+                }
+                $loanData = [
+                    'loans' => $loans,
+                    'total_remaining_amount' => $totalRemaingAmount,
+                    'total_cusotomer' => $totalCustomerCount 
+                ];
+                return sendSuccessResponse('Loans found successfully!', 200, $loanData);
+            }
+        }
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        }
+    }
 }

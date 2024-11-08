@@ -76,6 +76,7 @@ Route::middleware('api')->group(function () {
         Route::post('remove-loan-member', [CustomerLoanController::class, 'removeLoanMember']);
         Route::post('unassigned-loan', [CustomerLoanController::class, 'unassignedLoans']);
         Route::put('update-loan-status', [CustomerLoanController::class, 'updateLoanStatus']);
+        Route::post('completed-loan-list', [CustomerLoanController::class, 'completedLoanList']);
         //customerdeposit
         Route::post('create-customer-deposit', [CustomerDepositController::class, 'store']);
         Route::post('company-customer-deposits', [CustomerDepositController::class, 'index']);

@@ -145,7 +145,7 @@ class LoanHistoryController extends Controller
             $totalPaidAmount = $this->loanHistoryRepository->getTotalPaidAmount($request->loan_id);
             if($totalPaidAmount >= $loan->loan_amount)
             {
-                $loan->update(['loan_status' => 'completed']);
+                $loan->update(['loan_status' => 'completed','loan_status_changed_by' => $userId,'loan_status_change_date' => Carbon::now()->format('Y-m-d H:i:s'),'loan_status_message' => 'Due to pay complete paid amount loan auto completed']);
             }
             DB::commit();
             return sendSuccessResponse('Amount Paid successfully!', 201, $LoanHistory);
