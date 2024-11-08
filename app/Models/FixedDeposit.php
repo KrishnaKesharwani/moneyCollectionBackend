@@ -25,6 +25,8 @@ class FixedDeposit extends Model
         'status',
         'deposit_status',
         'details',
+        'reason',
+        'status_change_date',
     ];
 
     protected $hidden = [

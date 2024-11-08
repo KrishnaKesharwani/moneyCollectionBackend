@@ -95,6 +95,8 @@ Route::middleware('api')->group(function () {
         Route::post('update-fixed-deposit', [FixedDepositController::class, 'update']);
         Route::post('fixed-deposits', [FixedDepositController::class, 'index']);
         Route::post('pay-fixed-deposit-money', [FixedDepositHistoryController::class, 'store']);
+        Route::put('update-fixed-deposit-status', [FixedDepositController::class, 'updateFixedDepositStatus']);
+        Route::put('update-fd-status', [FixedDepositController::class, 'updateStatus']);
         //Route::post('fixed-deposit-history', [CustomerDepositController::class, 'fixedDepositHistory']);
         
         //change password

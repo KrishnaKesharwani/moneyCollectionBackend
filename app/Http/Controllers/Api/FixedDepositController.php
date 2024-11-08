@@ -191,100 +191,75 @@ class FixedDepositController extends Controller
     }
 
 
-    // public function depositHistory(Request $request)
-    // {
-    //     $validator = Validator::make($request->all(), [
-    //         'customer_id' => 'required|integer|exists:customers,id',
-    //         'deposit_id' => 'required|integer|exists:customer_deposits,id',
-    //     ]);
+    public function updateFixedDepositStatus(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            'fixed_deposit_id' => 'required|integer|exists:fixed_deposits,id',
+            'deposit_status' => 'required',
+            'reason' => 'nullable|string',
+        ]);
         
-    //     if ($validator->fails()) {
-    //         return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
-    //     }
 
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
 
-    //     try{
+        try{
+            DB::beginTransaction();
+            //update user status
+            $fixedDepositId = $request->fixed_deposit_id;
+            $updateFixedDepositData = [
+                'deposit_status' => $request->deposit_status,
+                'reason' => $request->reason ?? null,
+                'status_change_date' => Carbon::now()->format('Y-m-d H:i:s'),
+            ];
+            $deposit = $this->fixedDepositRepository->update($fixedDepositId,$updateFixedDepositData);
 
-    //         $fromDay = $request->from_day ?? null;
-    //         //get the previous date by the day count 
-    //         if($fromDay){
-    //             $fromDate = Carbon::now()->subDays($fromDay)->format('Y-m-d');
-    //         }else{
-    //             $fromDate = null;
-    //         }
+            if($deposit)
+            {
             
-    //         $collection = $this->customerDepositRepository->getdepositHistory($request->customer_id,$request->deposit_id,$fromDate);
-    //         if($collection->isEmpty())
-    //         {
-    //             return sendErrorResponse('Collection not found!', 404);
-    //         }
-    //         else
-    //         {
-    //             $balance = 0;
-    //             foreach ($collection as $key => $value) {
-    //                 $collection[$key]->balance = $balance;
-    //                 if ($value->action_type == 'credit') {
-    //                     $balance += $value->amount;
-    //                 }
-    //                 // If action_type is 'debit', subtract the amount from the balance
-    //                 elseif ($value->action_type == 'debit') {
-    //                     $balance -= $value->amount;
-    //                 }
-    //             }
+                DB::commit();
+                $depositData = $this->fixedDepositRepository->find($fixedDepositId);
+                return sendSuccessResponse('Deposit status updated successfully!',200,$depositData);
+            }
+            else
+            {
+                return sendErrorResponse('Deposit status not updated',422);
+            }
+        }
+        catch (Exception $e)
+        {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
 
-    //             $sortedCollection = $collection->sortByDesc('created_at')->values();
-    //             $responseData = 
-    //             [
-    //                 'collection' => $sortedCollection,
-    //             ];
-    //             return sendSuccessResponse('Collection found successfully!', 200, $responseData);
-    //         }
-    //     }
-    //     catch (\Exception $e) {
-    //         return sendErrorResponse($e->getMessage(), 500);
-    //     }
-    // }
+    public function updateStatus(Request $request){
 
-    // public function changeDepositMember(Request $request)
-    // {
-    //     $validator = Validator::make($request->all(), [
-    //         'deposit_id' => 'required|integer|exists:customer_deposits,id',
-    //         'member_id' => 'required|integer|exists:members,id',
-    //     ]);
+        $validator = Validator::make($request->all(), [
+            'fixed_deposit_id' => 'required|integer|exists:fixed_deposits,id',
+            'status' => 'required',
+        ]);
         
-    //     if ($validator->fails()) {
-    //         return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
-    //     }    
 
-    //     try{            
-    //         $customerDeposit   = $this->customerDepositRepository->find($request->deposit_id);
-    //         if($customerDeposit->assigned_member_id == $request->member_id)
-    //         {
-    //             return sendErrorResponse('Deposite member already assigned!', 409);
-    //         }
-    //         DB::beginTransaction();
-    //         $customerDeposit->assigned_member_id = $request->member_id;
-    //         $customerDeposit->member_changed_reason = $request->reason ?? null;
-    //         if($customerDeposit->save())
-    //         {
-    //             $memberData = [
-    //                 'deposit_id' => $customerDeposit->id,
-    //                 'member_id' => $request->member_id,
-    //                 'member_changed_reason' => $request->reason ?? null,
-    //                 'assigned_date' => Carbon::now()->format('Y-m-d H:i:s'),
-    //                 'assigned_by' => auth()->user()->id,
-    //             ];
-    //             $memberHistory = $this->depositeMemberHistoryRepository->create($memberData);
-    //             DB::commit();
-    //             return sendSuccessResponse('Deposit member changed successfully!', 200);
-    //         }
-    //         else
-    //         {   
-    //             return sendErrorResponse('Deposit member not changed!', 404);
-    //         }
-    //     }
-    //     catch (Exception $e) {
-    //         return sendErrorResponse($e->getMessage(), 500);
-    //     }
-    // }
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $fixedDeposit = $this->fixedDepositRepository->find($request->fixed_deposit_id);
+        if($fixedDeposit)
+        {   
+            $fixedDeposit->status = $request->status;
+            $fixedDeposit->save();
+            if($request->status=='active')
+            {
+                return sendSuccessResponse('Fixed deposit activated successfully!',200,$fixedDeposit);
+            }else{
+                return sendSuccessResponse('Fixed deposit inactived successfully!',200,$fixedDeposit);
+            }
+        }
+        else
+        {
+            return sendErrorResponse('Fixed deposit not found!', 404);
+        }
+    }
 }
