@@ -661,7 +661,7 @@ class CustomerLoanController extends Controller
         }
     }
 
-    public function completedLoanList(Request $request){
+    public function LoanListByStatus(Request $request){
 
         $inputData = [
             'company_id' => 'required|exists:companies,id',
@@ -835,6 +835,90 @@ class CustomerLoanController extends Controller
             }
             
             return sendSuccessResponse('Last 10 days received amount found successfully!', 200, $data);
+        }
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        }
+    }
+
+    public function customerDashboardLoanStatus(Request $request){
+
+        $inputData = [
+            'company_id' => 'required|exists:companies,id',
+            'customer_id' => 'required|exists:customers,id',
+        ];
+
+        $validator = Validator::make($request->all(), $inputData);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            
+        }
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        }
+    }
+
+    public function customerLoanStatusGraph(Request $request){
+
+        $inputData = [
+            'company_id' => 'required|exists:companies,id',
+            'customer_id' => 'required|exists:customers,id',
+        ];
+
+    
+
+        $validator = Validator::make($request->all(), $inputData);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            $status = $request->status ?? 'active';
+            $loanStatus = $request->loan_status ?? 'paid';
+            $customer = $request->customer_id ?? null;
+            $loans = $this->customerLoanRepository->getAllCustomerLoansStatus($request->company_id,$loanStatus,$status,$customer);
+            if($loans->isEmpty())
+            {
+                return sendErrorResponse('Loans not found!', 404);
+            }
+            else
+            {
+                $totalRemaingAmount = 0;
+                $totalCustomer = [];
+
+                foreach($loans as $loan)
+                {
+                    $paidAmount = $this->loanHistoryRepository->getTotalPaidAmount($loan->id);
+                    $loan->loan_amount = (float)$loan->loan_amount;
+                    $loan->total_paid = (float)$paidAmount;
+                    $remaingAmount = $loan->loan_amount - $paidAmount;
+                    $loan->remaining_amount = (float)$remaingAmount;
+                    $loan->paidPercentage = round(($paidAmount/$loan->loan_amount)*100,2);
+                    $loan->remainingPercentage = round(($remaingAmount/$loan->loan_amount)*100,2);
+                    $totalRemaingAmount = $totalRemaingAmount + $remaingAmount;
+                    $totalCustomer[] = $loan->customer_id;
+
+                }
+
+                $totalCustomerCount = 0;
+                if(!empty($totalCustomer)){
+                    $totalCustomer = array_unique($totalCustomer);
+                    $totalCustomerCount = count($totalCustomer);
+                }
+                $loanData = [
+                    'loans' => $loans,
+                    'total_remaining_amount' => $totalRemaingAmount,
+                    'total_cusotomer' => $totalCustomerCount 
+                ];
+                return sendSuccessResponse('Loans found successfully!', 200, $loanData);
+            }
         }
         catch (\Exception $e) {
             return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);

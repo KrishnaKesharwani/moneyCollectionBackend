@@ -16,6 +16,19 @@ class CustomerLoanRepository extends BaseRepository
         return $this->model->where('id', $id)->with('customer', 'member', 'document')->first();
     }
 
+    /**
+     * Get all customer loans by given conditions
+     *
+     * @param int|null $company_id
+     * @param string|null $loanStatus
+     * @param string|null $status
+     * @param int|null $memberId
+     * @param int|null $customerId
+     * @param string|null $startDate
+     * @param string|null $endDate
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
     public function getAllCustomerLoans($company_id, $loanStatus =null, $status = null,$memberId = null,$customerId = null,$startDate = null,$endDate = null)
     {
         $loans = $this->model->with('customer', 'member', 'document', 'loanHistory', 'loanHistory.recieved_member')
@@ -44,6 +57,25 @@ class CustomerLoanRepository extends BaseRepository
         return $loans;
     }
 
+
+    public function getAllCustomerLoansStatus($company_id, $loanStatus =null, $status = null,$customerId = null)
+    {
+        $loans = $this->model->where('company_id', $company_id)
+                ->when($status, function ($query, $status) {
+                    return $query->where('status', $status);
+                })
+                ->when($customerId, function ($query, $customerId) {
+                    return $query->where('customer_id', $customerId);
+                })
+                ->when($loanStatus, function ($query, $loanStatus) {
+                    return $query->where('loan_status', $loanStatus);
+                })
+                ->select('loan_no','id','loan_amount')
+                ->orderBy('id', 'desc')
+                ->get();
+
+        return $loans;
+    }
     /**
      * Get all member not assigned loans
      *
