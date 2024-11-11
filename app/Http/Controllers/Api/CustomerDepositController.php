@@ -312,8 +312,8 @@ class CustomerDepositController extends Controller
             $month  = carbon::now()->month;
             //current year
             $year   = carbon::now()->year;
-
-            $activeDeposits = $this->customerDepositRepository->getAllActiveDeposits($request->company_id)->pluck('id');
+            $customerId = $request->customer_id ?? null;
+            $activeDeposits = $this->customerDepositRepository->getAllActiveDeposits($request->company_id,$customerId)->pluck('id');
 
             if(count($activeDeposits) > 0)
             {
@@ -331,8 +331,8 @@ class CustomerDepositController extends Controller
                     $withdrawAmount = $this->depositHistoryRepository->getDepositAmountByDate($activeDeposits,'debit',$startDate,$endDate);
                     $data[$i] = [
                         'month' => $monthName,
-                        'deposit_amount' => $depositAmount,
-                        'withdraw_amount' => $withdrawAmount,
+                        'deposit_amount' => (float)$depositAmount,
+                        'withdraw_amount' => (float)$withdrawAmount,
                         'start_date' => $startDate,
                         'end_date' => $endDate
                     ];

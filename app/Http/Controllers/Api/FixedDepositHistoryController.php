@@ -42,7 +42,8 @@ class FixedDepositHistoryController extends Controller
             'amount' => $request->amount,
             'action_type' => 'debit',
             'action_date' => $receiveDate,
-            'debit_type' => $request->debit_type
+            'debit_type' => $request->debit_type,
+            'details' => $request->details ?? null
         ]);
         
         if($depositHistory)

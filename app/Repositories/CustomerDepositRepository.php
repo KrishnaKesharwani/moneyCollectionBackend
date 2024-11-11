@@ -16,8 +16,12 @@ class CustomerDepositRepository extends BaseRepository
         return $this->model->where('id', $id)->with('customer', 'member')->first();
     }
 
-    public function getAllActiveDeposits($company_id){
-        return $this->model->where('company_id', $company_id)->where('status', 'active');
+    public function getAllActiveDeposits($company_id,$customerId = null){
+        return $this->model->where('company_id', $company_id)
+        ->when($customerId, function ($query, $customerId) {
+            return $query->where('customer_id', $customerId);
+        })
+        ->where('status', 'active');
     }
 
     public function getAllCustomerDeposits($company_id, $status = null,$memberId = null,$customerId = null)

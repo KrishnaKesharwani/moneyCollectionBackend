@@ -19,6 +19,7 @@ class FixedDepositHistory extends Model
         'action_type',
         'action_date',
         'debit_type',
+        'details'
     ];
 
     protected $hidden = [
