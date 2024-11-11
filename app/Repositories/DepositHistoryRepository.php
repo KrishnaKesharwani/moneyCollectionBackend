@@ -30,5 +30,15 @@ class DepositHistoryRepository extends BaseRepository
             return null;
     }
     
+    public function getDepositReceivedAmountByDate($companyId, $memberId, $date){
+        $amount = DB::table('deposit_history')
+                    ->join('customer_deposits', 'deposit_history.deposit_id', '=', 'customer_deposits.id')
+                    ->where('customer_deposits.company_id', $companyId)
+                    ->where('deposit_history.receiver_member_id', $memberId)
+                    ->whereDate('deposit_history.action_date', $date)
+                    ->where('deposit_history.action_type', 'credit')
+                    ->sum('deposit_history.amount');
+        return $amount;
+    }
     // You can add any specific methods related to User here
 }

@@ -14,6 +14,7 @@ use App\Repositories\LoanStatusHistoryRepository;
 use App\Repositories\LoanMemberHistoryRepository;
 use App\Repositories\LoanDocumentRepository;
 use App\Repositories\LoanHistoryRepository;
+use App\Repositories\DepositHistoryRepository;
 use App\Repositories\MemberRepository;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -28,6 +29,7 @@ class CustomerLoanController extends Controller
     protected $loanMemberHistoryRepository;
     protected $loanDocumentRepository;
     protected $loanHistoryRepository;
+    protected $depositHistoryRepository;
     protected $memberRepository;
 
     public function __construct(
@@ -37,6 +39,7 @@ class CustomerLoanController extends Controller
         LoanMemberHistoryRepository $loanMemberHistoryRepository,
         LoanDocumentRepository $loanDocumentRepository,
         LoanHistoryRepository $loanHistoryRepository,
+        DepositHistoryRepository $depositHistoryRepository,
         MemberRepository $memberRepository
         )
     {
@@ -46,6 +49,7 @@ class CustomerLoanController extends Controller
         $this->loanMemberHistoryRepository          = $loanMemberHistoryRepository;
         $this->loanDocumentRepository               = $loanDocumentRepository;
         $this->loanHistoryRepository                = $loanHistoryRepository;
+        $this->depositHistoryRepository             = $depositHistoryRepository;
         $this->memberRepository                     = $memberRepository;
     }
 
@@ -790,6 +794,47 @@ class CustomerLoanController extends Controller
             {
                 return sendErrorResponse('Loans not found!', 404);
             }
+        }
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        }
+    }
+
+    public function calculateReceivedAmountForMemberLineGraph(Request $request){
+
+        $inputData = [
+            'company_id' => 'required|exists:companies,id',
+            'member_id' => 'required|exists:members,id',
+        ];
+
+        $validator = Validator::make($request->all(), $inputData);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            //current date
+            $currentDate = Carbon::now()->format('Y-m-d');
+            $data = [];
+            for($i = 0; $i < 10; $i++)
+            {
+                $searchDate = '';
+                if($i == 0) $searchDate = $currentDate;
+                else $searchDate        = Carbon::now()->subDays($i)->format('Y-m-d');
+                $loanReceivedAmount     = $this->loanHistoryRepository->getLoanReceivedAmountByDate($request->company_id,$request->member_id,$searchDate);
+                $depositReceivedAmount  = $this->depositHistoryRepository->getDepositReceivedAmountByDate($request->company_id,$request->member_id,$searchDate);
+                $totalReceivedAmount    = $loanReceivedAmount + $depositReceivedAmount;
+                //format search date in Y-m-d
+                $searchDate = Carbon::parse($searchDate)->format('d M');
+                $data[$i] = [
+                    'date' => $searchDate,
+                    'received_amount' => $totalReceivedAmount,
+                ];
+            }
+            
+            return sendSuccessResponse('Last 10 days received amount found successfully!', 200, $data);
         }
         catch (\Exception $e) {
             return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
