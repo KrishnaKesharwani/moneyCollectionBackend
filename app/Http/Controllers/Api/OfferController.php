@@ -247,4 +247,18 @@ class OfferController extends Controller
             return sendErrorResponse('Offer not found!', 404);
         }
     }
+
+    public function destroy($id)
+    {
+        $offer = $this->offerRepository->find($id);
+        if($offer)
+        {
+            $this->offerRepository->delete($id);
+            return sendSuccessResponse('Offer deleted successfully!', 200);
+        }
+        else
+        {
+            return sendErrorResponse('Offer not found!', 404);
+        }
+    }
 }

@@ -23,21 +23,21 @@ class CustomerDepositController extends Controller
     protected $customerRepository;
     protected $customerDepositRepository;
     protected $depositeMemberHistoryRepository;
-    protected $depositeHistoryRepository;
+    protected $depositHistoryRepository;
     protected $memberRepository;
 
     public function __construct(
         CustomerRepository $customerRepository,
         CustomerDepositRepository $customerDepositRepository,
         DepositMemberHistoryRepository $depositeMemberHistoryRepository,
-        DepositHistoryRepository $depositeHistoryRepository,
+        DepositHistoryRepository $depositHistoryRepository,
         MemberRepository $memberRepository
         )
     {
         $this->customerRepository                       = $customerRepository;
         $this->customerDepositRepository               = $customerDepositRepository;;
         $this->depositeMemberHistoryRepository          = $depositeMemberHistoryRepository;
-        $this->depositeHistoryRepository                = $depositeHistoryRepository;
+        $this->depositHistoryRepository                = $depositHistoryRepository;
         $this->memberRepository                         = $memberRepository;
     }
 
@@ -76,8 +76,8 @@ class CustomerDepositController extends Controller
                 
                 foreach($deposits as $deposit)
                 {
-                    $paidAmount             = $this->depositeHistoryRepository->getTotalDepositAmount($deposit->id,'credit');
-                    $recievedAmount         = $this->depositeHistoryRepository->getTotalDepositAmount($deposit->id,'debit');
+                    $paidAmount             = $this->depositHistoryRepository->getTotalDepositAmount($deposit->id,'credit');
+                    $recievedAmount         = $this->depositHistoryRepository->getTotalDepositAmount($deposit->id,'debit');
                     $deposit->total_paid    = $paidAmount;
                     $deposit->total_recieve = $recievedAmount;
                     $remaingAmount          = $paidAmount - $recievedAmount;
@@ -89,7 +89,7 @@ class CustomerDepositController extends Controller
                         $totalCustomer[]    = $deposit->customer_id;
                     }
                     
-                    $depositMaxDate = $this->depositeHistoryRepository->getMaxDepositHistoryDate($deposit->id,'credit');
+                    $depositMaxDate = $this->depositHistoryRepository->getMaxDepositHistoryDate($deposit->id,'credit');
                     if($depositMaxDate)
                     {
                         //convert loan max date to carbon Y-m-d format
@@ -282,6 +282,71 @@ class CustomerDepositController extends Controller
         }
         catch (Exception $e) {
             return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
+
+
+    /**
+     * Get deposit data for company dashboard
+     * 
+     * Get deposit, recieved and remaining amount for last 6 months
+     * 
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function calculateDepositofLast6Months(Request $request){
+
+        $inputData = [
+            'company_id' => 'required|exists:companies,id',
+        ];
+
+        $validator = Validator::make($request->all(), $inputData);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            //current month
+            $month  = carbon::now()->month;
+            //current year
+            $year   = carbon::now()->year;
+
+            $activeDeposits = $this->customerDepositRepository->getAllActiveDeposits($request->company_id)->pluck('id');
+
+            if(count($activeDeposits) > 0)
+            {
+
+                $data = [];
+                for($i = 0; $i < 6; $i++)
+                {
+                    $startDate = Carbon::createFromDate($year, $month-$i, 1)->format('Y-m-d');
+                    //current month end date
+                    $endDate = Carbon::createFromDate($year, $month-$i, 1)->endOfMonth()->format('Y-m-d');
+                    //get month name from start date
+                    $monthName = Carbon::createFromDate($year, $month-$i, 1)->format('M');
+
+                    $depositAmount  = $this->depositHistoryRepository->getDepositAmountByDate($activeDeposits,'credit',$startDate,$endDate);
+                    $withdrawAmount = $this->depositHistoryRepository->getDepositAmountByDate($activeDeposits,'debit',$startDate,$endDate);
+                    $data[$i] = [
+                        'month' => $monthName,
+                        'deposit_amount' => $depositAmount,
+                        'withdraw_amount' => $withdrawAmount,
+                        'start_date' => $startDate,
+                        'end_date' => $endDate
+                    ];
+                }
+                
+                return sendSuccessResponse('Deposits found successfully!', 200, $data);
+            }
+            else
+            {
+                return sendErrorResponse('Deposits not found!', 404);
+            }
+        }
+        catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
         }
     }
 }

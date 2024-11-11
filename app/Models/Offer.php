@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Offer extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'offers';
     protected $fillable = ['name', 'company_id', 'type','status','details','image','default_offer'];

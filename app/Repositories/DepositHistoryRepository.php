@@ -18,6 +18,9 @@ class DepositHistoryRepository extends BaseRepository
         return $this->model->where('deposit_id', $depositId)->where('action_type', $type)->sum('amount');
     }
 
+    public function getDepositAmountByDate($depositId, $type,$fromDate,$toDate){
+        return $this->model->whereIn('deposit_id', $depositId)->where('action_type', $type)->whereDate('action_date','>=', $fromDate)->whereDate('action_date','<=', $toDate)->sum('amount');
+    }
 
     public function getMaxDepositHistoryDate($depositId){
         $maxDate = $this->model->where('deposit_id', $depositId)->where('action_type', 'credit')->max('action_date');

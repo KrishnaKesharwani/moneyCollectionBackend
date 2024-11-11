@@ -102,17 +102,40 @@ class CustomerLoanRepository extends BaseRepository
     }
     
 
-    public function getTotalLoanAmount($company_id){
-        return $this->model->totalLoanAmount($company_id)->sum('loan_amount');
+    public function getTotalLoanAmount($company_id, $memberId = null) {
+        return $this->model->where('company_id', $company_id)
+                    ->when($memberId, function ($query) use ($memberId) {
+                        return $query->where('assigned_member_id', $memberId);
+                    })
+                    ->where('status', 'active')
+                    ->where('loan_status', 'paid')
+                    ->sum('loan_amount');
     }
 
-    public function getRunningLoanIds($company_id){
-        return $this->model->totalLoanAmount($company_id)->pluck('id');
+    public function getRunningLoanIds($company_id, $memberId = null) {
+        return $this->model->where('company_id', $company_id)
+                    ->when($memberId, function ($query) use ($memberId) {
+                        return $query->where('assigned_member_id', $memberId);
+                    })
+                    ->where('status', 'active')
+                    ->where('loan_status', 'paid')
+                    ->pluck('id');
     }
 
-    public function getTotalCustomer($company_id, $loanStatus){
+    /**
+     * Get the total number of distinct active customers for a given company and loan status.
+     *
+     * @param int $company_id The ID of the company.
+     * @param string $loanStatus The status of the loan.
+     * @return int The count of distinct customers.
+     */
+
+    public function getTotalCustomer($company_id, $loanStatus,$memberId = null) {   
         return $this->model
             ->where('company_id', $company_id)
+            ->when($memberId, function ($query) use ($memberId) {
+                return $query->where('assigned_member_id', $memberId);
+            })
             ->where('loan_status', $loanStatus)
             ->where('status', 'active')
             ->distinct('customer_id')

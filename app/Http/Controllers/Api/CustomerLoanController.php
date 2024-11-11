@@ -749,7 +749,7 @@ class CustomerLoanController extends Controller
         }
     }
 
-    public function companyDashboardLoanStatus(Request $request){
+    public function dashboardLoanStatus(Request $request){
 
         $inputData = [
             'company_id' => 'required|exists:companies,id',
@@ -763,9 +763,10 @@ class CustomerLoanController extends Controller
         }
 
         try{
-            $totalLoanAmount    = $this->customerLoanRepository->getTotalLoanAmount($request->company_id);
-            $loanIds            = $this->customerLoanRepository->getRunningLoanIds($request->company_id);
-            $totalCustomerCount = $this->customerLoanRepository->getTotalCustomer($request->company_id,'paid');
+            $memberId            = $request->member_id ?? null;
+            $totalLoanAmount    = $this->customerLoanRepository->getTotalLoanAmount($request->company_id,$memberId);
+            $loanIds            = $this->customerLoanRepository->getRunningLoanIds($request->company_id,$memberId);
+            $totalCustomerCount = $this->customerLoanRepository->getTotalCustomer($request->company_id,'paid',$memberId);
             if(count($loanIds) > 0)
             {
                 $totalPaidAmount = $this->loanHistoryRepository->getTotalPaidAmountByLoanIds($loanIds);
@@ -780,8 +781,8 @@ class CustomerLoanController extends Controller
                     'total_paid_amount' => (float)$totalPaidAmount,
                     'total_remaining_amount' => $totalRemaingAmount,
                     'total_cusotomer' => $totalCustomerCount,
-                    'paid_percentage' => $percentage,
-                    'remaining_percentage' => $remainingPercentage 
+                    'paid_percentage' => round($percentage,2),
+                    'remaining_percentage' => round($remainingPercentage,2), 
                 ];
                 return sendSuccessResponse('Loans found successfully!', 200, $loanData);
             }

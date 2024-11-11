@@ -77,13 +77,14 @@ Route::middleware('api')->group(function () {
         Route::post('unassigned-loan', [CustomerLoanController::class, 'unassignedLoans']);
         Route::put('update-loan-status', [CustomerLoanController::class, 'updateLoanStatus']);
         Route::post('completed-loan-list', [CustomerLoanController::class, 'completedLoanList']);
-        Route::post('loan-status-graph', [CustomerLoanController::class, 'companyDashboardLoanStatus']);
+        Route::post('loan-status-graph', [CustomerLoanController::class, 'dashboardLoanStatus']);
         //customerdeposit
         Route::post('create-customer-deposit', [CustomerDepositController::class, 'store']);
         Route::post('company-customer-deposits', [CustomerDepositController::class, 'index']);
         Route::post('collect-deposit-money', [DepositHistoryController::class, 'store']);
         Route::post('customer-deposit-history', [CustomerDepositController::class, 'depositHistory']);
         Route::post('change-deposit-member', [CustomerDepositController::class, 'changeDepositMember']);
+        Route::post('company-deposit-status-graph', [CustomerDepositController::class, 'calculateDepositofLast6Months']);
 
         //offers
         Route::post('create-offer', [OfferController::class, 'store']);
@@ -91,6 +92,8 @@ Route::middleware('api')->group(function () {
         Route::post('offers', [OfferController::class, 'index']);
         Route::put('update-offer-status',[OfferController::class,'updateOfferStatus']);
         Route::put('update-default-offer',[OfferController::class,'updateDefaultOffer']);
+        //delete offer
+        Route::delete('delete-offer/{id}', [OfferController::class, 'destroy']);
 
         //fixed deposit
         Route::post('create-fixed-deposit', [FixedDepositController::class, 'store']);
