@@ -61,26 +61,32 @@ class CustomerDepositRepository extends BaseRepository
     //get total credit amount by a member of last date
     public function getLastDateTransaction($companyId, $memberId, $customer, $depositType)
     {
+        $latestTransactions = DB::table('deposit_history')
+            ->select('deposit_id', DB::raw('MAX(action_date) as latest_date'))
+            ->where('action_type', $depositType)
+            ->groupBy('deposit_id');
+
         $amount = DB::table('customer_deposits')
-            ->where('company_id', $companyId)
+            ->where('customer_deposits.company_id', $companyId)
             ->when($memberId, function ($query, $memberId) {
-                return $query->where('assigned_member_id', $memberId);
+                return $query->where('customer_deposits.assigned_member_id', $memberId);
             })
             ->when($customer, function ($query, $customer) {
-                return $query->where('customer_id', $customer);
+                return $query->where('customer_deposits.customer_id', $customer);
             })
-            ->join('deposit_history', 'customer_deposits.id', '=', 'deposit_history.deposit_id')
-            ->where('deposit_history.action_type', $depositType)
-            ->where('deposit_history.action_date', function ($query) use ($depositType) {
-                $query->select(DB::raw('MAX(deposit_history.action_date)'))
-                    ->from('deposit_history')
-                    ->where('action_type', $depositType)
-                    ->groupBy('deposit_history.deposit_id');
+            ->join('deposit_history', function ($join) use ($depositType) {
+                $join->on('customer_deposits.id', '=', 'deposit_history.deposit_id')
+                    ->where('deposit_history.action_type', '=', $depositType);
+            })
+            ->joinSub($latestTransactions, 'latest_transactions', function ($join) {
+                $join->on('deposit_history.deposit_id', '=', 'latest_transactions.deposit_id')
+                    ->on('deposit_history.action_date', '=', 'latest_transactions.latest_date');
             })
             ->sum('deposit_history.amount');
 
-        return $amount;
+        return (float)$amount;
     }
+
 
     public function getdepositHistory($customerId,$depositId,$fromDate){
         $history = DB::table('customer_deposits')
