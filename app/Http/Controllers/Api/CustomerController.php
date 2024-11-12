@@ -128,7 +128,9 @@ class CustomerController extends Controller
             }
 
             // Process the base64 images
-            $validatedData['image']         = $this->storeBase64Image($request->image, 'customer');
+            $validatedData['image']         = storeBase64Image($request->image, 'customer');
+            $validatedData['adhar_front']   = storeBase64Image($request->adhar_front, 'customer');
+            $validatedData['adhar_back']    = storeBase64Image($request->adhar_back, 'customer');
             $validatedData['customer_no']   = $customer_no;
             $validatedData['created_by']    = Auth::user()->id;
             $cleanTimeString                = preg_replace('/\s*\(.*\)$/', '', $request->join_date);
@@ -212,7 +214,15 @@ class CustomerController extends Controller
 
             // Process the base64 images
             if($request->image!=''){
-                $validatedData['image']     = $this->storeBase64Image($request->image, 'customer');
+                $validatedData['image']     = storeBase64Image($request->image, 'customer');
+            }
+
+            if($request->adhar_front!=''){
+                $validatedData['adhar_front']   = storeBase64Image($request->adhar_front, 'customer');
+            }
+
+            if($request->adhar_back!=''){
+                $validatedData['adhar_back']    = storeBase64Image($request->adhar_back, 'customer');
             }
 
             $cleanTimeString            = preg_replace('/\s*\(.*\)$/', '', $request->join_date);
@@ -310,7 +320,7 @@ class CustomerController extends Controller
                 $customer_no            = $companyPrefix . '-cus-' . $company->id . '-' . ($company->customer_count + 1);
 
                 // Process images and other data
-                //$data['image'] = $this->storeBase64Image($data['image'], 'customer');
+                //$data['image'] = storeBase64Image($data['image'], 'customer');
                 $data['customer_no']    = $customer_no;
                 $data['company_id']     = $request->company_id;
                 $data['created_by']     = Auth::user()->id;
@@ -339,38 +349,38 @@ class CustomerController extends Controller
     }
 
 
-    /**
-     * Decode and store base64 image.
-     *
-     * @param string|null $base64Image
-     * @param string $directory
-     * @return string|null
-     */
-    private function storeBase64Image($base64Image, $directory)
-    {
-        if (!$base64Image) {
-            return null; // Return null if no image is provided
-        }
+    // /**
+    //  * Decode and store base64 image.
+    //  *
+    //  * @param string|null $base64Image
+    //  * @param string $directory
+    //  * @return string|null
+    //  */
+    // private function storeBase64Image($base64Image, $directory)
+    // {
+    //     if (!$base64Image) {
+    //         return null; // Return null if no image is provided
+    //     }
 
-        // Extract the mime type and the Base64 data
-        $imageParts = explode(';base64,', $base64Image);
+    //     // Extract the mime type and the Base64 data
+    //     $imageParts = explode(';base64,', $base64Image);
 
-        // Get the image extension from the mime type
-        $imageTypeAux = explode('image/', $imageParts[0]);
-        $imageType = $imageTypeAux[1]; // e.g., 'jpeg', 'png', 'gif'
+    //     // Get the image extension from the mime type
+    //     $imageTypeAux = explode('image/', $imageParts[0]);
+    //     $imageType = $imageTypeAux[1]; // e.g., 'jpeg', 'png', 'gif'
 
-        // Decode the Base64 string into binary data
-        $imageData = base64_decode($imageParts[1]);
+    //     // Decode the Base64 string into binary data
+    //     $imageData = base64_decode($imageParts[1]);
 
-        // Generate a unique file name for the image
-        $fileName = Str::random(10) . '.' . $imageType;
+    //     // Generate a unique file name for the image
+    //     $fileName = Str::random(10) . '.' . $imageType;
 
-        // Store the image in the public storage folder (or any custom directory)
-        $path = Storage::put("public/{$directory}/{$fileName}", $imageData);
+    //     // Store the image in the public storage folder (or any custom directory)
+    //     $path = Storage::put("public/{$directory}/{$fileName}", $imageData);
         
-        // Return the stored path or URL to save in the database
-        return $directory.'/'.$fileName;
-    }
+    //     // Return the stored path or URL to save in the database
+    //     return $directory.'/'.$fileName;
+    // }
 
 
     /**

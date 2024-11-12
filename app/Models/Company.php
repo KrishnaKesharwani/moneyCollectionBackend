@@ -33,6 +33,8 @@ class Company extends Model
         'primary_color',
         'secondary_color',
         'prefix',
+        'adhar_front',
+        'adhar_back',
     ];
 
     protected $hidden = [
@@ -63,6 +65,16 @@ class Company extends Model
 
     // Accessor for owner_image
     public function getOwnerImageAttribute($value)
+    {
+        return !empty($value) ? url('storage/app/public/' . $value) : null;
+    }
+
+    public function getAdharFrontAttribute($value)
+    {
+        return !empty($value) ? url('storage/app/public/' . $value) : null;
+    }
+
+    public function getAdharBackAttribute($value)
     {
         return !empty($value) ? url('storage/app/public/' . $value) : null;
     }

@@ -220,10 +220,12 @@ class CompanyController extends Controller
             $endDate              = Carbon::parse($cleanEndDate)->format('Y-m-d');
 
             // Process the base64 images
-            $validatedData['main_logo']     = $this->storeBase64Image($request->main_logo, 'logos/main');
-            $validatedData['sidebar_logo']  = $this->storeBase64Image($request->sidebar_logo, 'logos/sidebar');
-            $validatedData['favicon_icon']  = $this->storeBase64Image($request->favicon_icon, 'icons/favicon');
-            $validatedData['owner_image']   = $this->storeBase64Image($request->owner_image, 'owners');
+            $validatedData['main_logo']     = storeBase64Image($request->main_logo, 'logos/main');
+            $validatedData['sidebar_logo']  = storeBase64Image($request->sidebar_logo, 'logos/sidebar');
+            $validatedData['favicon_icon']  = storeBase64Image($request->favicon_icon, 'icons/favicon');
+            $validatedData['owner_image']   = storeBase64Image($request->owner_image, 'owners');
+            $validatedData['adhar_front']   = storeBase64Image($request->adhar_front, 'owners');
+            $validatedData['adhar_back']    = storeBase64Image($request->adhar_back, 'owners');
             $validatedData['user_id']       = $user->id;
             $validatedData['start_date']    = $startDate;
             $validatedData['end_date']      = $endDate;
@@ -306,19 +308,29 @@ class CompanyController extends Controller
                 // Process the base64 images
                 if($request->main_logo!='')
                 {
-                    $company->main_logo = $this->storeBase64Image($request->main_logo, 'logos/main');
+                    $company->main_logo = storeBase64Image($request->main_logo, 'logos/main');
                 }
                 if($request->sidebar_logo!='')
                 {
-                    $company->sidebar_logo = $this->storeBase64Image($request->sidebar_logo, 'logos/sidebar');
+                    $company->sidebar_logo = storeBase64Image($request->sidebar_logo, 'logos/sidebar');
                 }
                 if($request->favicon_icon!='')
                 {
-                    $company->favicon_icon = $this->storeBase64Image($request->favicon_icon, 'icons/favicon');
+                    $company->favicon_icon = storeBase64Image($request->favicon_icon, 'icons/favicon');
                 }
                 if($request->owner_image!='')
                 {
-                    $company->owner_image = $this->storeBase64Image($request->owner_image, 'owners');
+                    $company->owner_image = storeBase64Image($request->owner_image, 'owners');
+                }
+
+                if($request->adhar_front!='')
+                {
+                    $company->adhar_front = storeBase64Image($request->adhar_front, 'owners');
+                }
+
+                if($request->adhar_back!='')
+                {
+                    $company->adhar_back = storeBase64Image($request->adhar_back, 'owners');
                 }
                 // Update the company data in the database
 
@@ -345,38 +357,6 @@ class CompanyController extends Controller
         }
     }
 
-    /**
-     * Decode and store base64 image.
-     *
-     * @param string|null $base64Image
-     * @param string $directory
-     * @return string|null
-     */
-    private function storeBase64Image($base64Image, $directory)
-    {
-        if (!$base64Image) {
-            return null; // Return null if no image is provided
-        }
-
-        // Extract the mime type and the Base64 data
-        $imageParts = explode(';base64,', $base64Image);
-
-        // Get the image extension from the mime type
-        $imageTypeAux = explode('image/', $imageParts[0]);
-        $imageType = $imageTypeAux[1]; // e.g., 'jpeg', 'png', 'gif'
-
-        // Decode the Base64 string into binary data
-        $imageData = base64_decode($imageParts[1]);
-
-        // Generate a unique file name for the image
-        $fileName = Str::random(10) . '.' . $imageType;
-
-        // Store the image in the public storage folder (or any custom directory)
-        $path = Storage::put("public/{$directory}/{$fileName}", $imageData);
-        
-        // Return the stored path or URL to save in the database
-        return $directory.'/'.$fileName;
-    }
 
     /**
      * Create a company plan after the company is created.

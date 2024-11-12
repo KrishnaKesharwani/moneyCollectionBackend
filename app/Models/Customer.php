@@ -26,6 +26,8 @@ class Customer extends Model
         'loan_count',
         'deposit_count',
         'created_by',
+        'adhar_front',
+        'adhar_back',
     ];
 
     protected $hidden = [
@@ -35,6 +37,16 @@ class Customer extends Model
     ];
 
     public function getImageAttribute($value)
+    {
+        return !empty($value) ? url('storage/app/public/' . $value) : null;
+    }
+
+    public function getAdharFrontAttribute($value)
+    {
+        return !empty($value) ? url('storage/app/public/' . $value) : null;
+    }
+
+    public function getAdharBackAttribute($value)
     {
         return !empty($value) ? url('storage/app/public/' . $value) : null;
     }
