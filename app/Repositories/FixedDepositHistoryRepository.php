@@ -27,5 +27,8 @@ class FixedDepositHistoryRepository extends BaseRepository
             return null;
     }
     
+    public function deleteByFixedDepositId($fixedDepositId){
+        return $this->model->where('fixed_deposit_id', $fixedDepositId)->delete();
+    }
     // You can add any specific methods related to User here
 }

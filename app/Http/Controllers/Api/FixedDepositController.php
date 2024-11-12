@@ -262,4 +262,28 @@ class FixedDepositController extends Controller
             return sendErrorResponse('Fixed deposit not found!', 404);
         }
     }
+
+    //delete fixed deposit
+    public function destroy($id){
+        try{
+            $fixedDeposit = $this->fixedDepositRepository->find($id);
+            if($fixedDeposit)
+            {
+                DB::beginTransaction();
+                if($fixedDeposit->delete())
+                {
+                    $this->fixedDepositHistoryRepository->deleteByFixedDepositId($id);
+                    DB::commit();
+                }
+                return sendSuccessResponse('Fixed deposit deleted successfully!',200);
+            }
+            else
+            {
+                return sendErrorResponse('Fixed deposit not found!', 404);
+            }
+        }
+        catch(Exception $e){
+            return sendErrorResponse($e->getMessage(),500);
+        }
+    }
 }

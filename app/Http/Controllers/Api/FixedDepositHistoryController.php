@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\FixedDepositHistory;
 use Illuminate\Http\Request;
 use App\Repositories\FixedDepositHistoryRepository;
+use App\Repositories\FixedDepositRepository;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use exception;
@@ -13,12 +14,15 @@ use Carbon\Carbon;
 class FixedDepositHistoryController extends Controller
 {
     protected $fixedDepositHistoryRepository;
+    protected $fixedDepositRepository;
 
     public function __construct(
         FixedDepositHistoryRepository $fixedDepositHistoryRepository,
+        FixedDepositRepository $fixedDepositRepository
         )
     {
         $this->fixedDepositHistoryRepository = $fixedDepositHistoryRepository;
+        $this->fixedDepositRepository = $fixedDepositRepository;
     }
 
 
@@ -37,6 +41,7 @@ class FixedDepositHistoryController extends Controller
         
         $receiveDate    = Carbon::now()->format('Y-m-d H:i:s');
 
+        DB::beginTransaction();
         $depositHistory    = $this->fixedDepositHistoryRepository->create([
             'fixed_deposit_id' => $request->fixed_deposit_id,
             'amount' => $request->amount,
@@ -48,10 +53,25 @@ class FixedDepositHistoryController extends Controller
         
         if($depositHistory)
         {
+            if($request->debit_type == 'money back'){
+                $fixedDeposit = $this->fixedDepositRepository->find($request->fixed_deposit_id);
+                if(!$fixedDeposit)
+                {
+                    return sendErrorResponse('Fixed deposit not found!', 404);
+                }
 
-            $message = 'Amount debit successfully!';
-
-            return sendSuccessResponse($message, 201, $depositHistory);
+                if($fixedDeposit->deposit_amount >= $request->amount){
+                    $fixedDeposit->deposit_amount = $fixedDeposit->deposit_amount - $request->amount;
+                    $fixedDeposit->save();
+                    DB::commit();
+                    return sendSuccessResponse('Amount debit successfully!', 201, $depositHistory);
+                }
+                else
+                {
+                    return sendErrorResponse('Money Back amount is greater than deposit amount', 422);
+                }
+                
+            }
         }
         else
         {

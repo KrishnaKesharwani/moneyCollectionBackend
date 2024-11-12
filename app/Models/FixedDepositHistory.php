@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class FixedDepositHistory extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'fixed_deposits_history';
 
@@ -25,5 +26,6 @@ class FixedDepositHistory extends Model
     protected $hidden = [
         'created_at',
         'updated_at',
+        'deleted_at'
     ];
 }
