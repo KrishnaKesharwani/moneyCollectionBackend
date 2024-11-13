@@ -42,7 +42,7 @@ class CustomerLoan extends Model
 
     public function customer()
     {
-        return $this->belongsTo(Customer::class, 'customer_id')->select('id','customer_no','name', 'image', 'mobile');
+        return $this->belongsTo(Customer::class, 'customer_id')->select('id','customer_no','name', 'image', 'mobile','address');
     }
 
     public function member()
