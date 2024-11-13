@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\CustomerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,6 +18,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('download-customers', [CustomerController::class, 'downloadCustomers']);
 
 Route::get('/clear-cache', function () {
     // Run the optimize:clear command
@@ -25,6 +27,7 @@ Route::get('/clear-cache', function () {
     
     return "Cache and optimization cleared!";
 });
+
 
 Route::get('storage-link', function () {
     Artisan::call('storage:link');

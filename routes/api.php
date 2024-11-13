@@ -62,6 +62,7 @@ Route::middleware('api')->group(function () {
         Route::post('customers', [CustomerController::class, 'index']);
         Route::put('updatecustomerstatus', [CustomerController::class, 'updateCustomerStatus']);
         Route::post('importcustomers', [CustomerController::class, 'importCustomers']);
+        Route::post('download-customers', [CustomerController::class, 'downloadCustomers']);
 
         //customerLoan
 

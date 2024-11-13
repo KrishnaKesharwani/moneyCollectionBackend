@@ -17,6 +17,10 @@ use Carbon\Carbon;
 use exception;
 use Auth;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
 
 class CustomerController extends Controller
 {
@@ -442,4 +446,79 @@ class CustomerController extends Controller
             return sendErrorResponse('Customer not found!', 404);
         }
     }
+
+
+    public function downloadCustomers(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required|exists:companies,id',
+            'status' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        if ($request->status == 'all') {
+            $status = null;
+        } else {
+            $status = $request->status;
+        }
+
+        $companyId = $request->company_id ?? 1;
+
+        // Create new Spreadsheet object
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set the header
+        $sheet->setCellValue('A1', 'Serial No');
+        $sheet->setCellValue('B1', 'Customer Number');
+        $sheet->setCellValue('C1', 'Name');
+        $sheet->setCellValue('D1', 'Email');
+        $sheet->setCellValue('E1', 'Mobile');
+        $sheet->setCellValue('F1', 'Address');
+        $sheet->setCellValue('G1', 'Join Date');
+        $sheet->setCellValue('H1', 'Status');
+
+
+        // Retrieve your data from the database (example: getting users)
+        $customers = $this->customerRepository->getAllCustomers($companyId, $status);
+
+        // Populate the spreadsheet with data
+        $row = 2; // Start from row 2 to avoid overwriting headers
+        foreach ($customers as $customer) {
+            $sheet->setCellValue('A' . $row, $row-1);
+            $sheet->setCellValue('B' . $row, $customer->customer_no);
+            $sheet->setCellValue('c' . $row, $customer->name);
+            $sheet->setCellValue('d' . $row, $customer->email);
+            $sheet->setCellValue('e' . $row, $customer->mobile);
+            $sheet->setCellValue('f' . $row, $customer->address);
+            $sheet->setCellValue('g' . $row, $customer->join_date);
+            $sheet->setCellValue('h' . $row, $customer->status);
+            $row++;
+        }
+
+        // Set up the response for download
+        $response = new StreamedResponse(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output'); // Stream the file directly to the response
+        });
+
+        // Set headers for file download
+        $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $response->headers->set('Content-Disposition', 'attachment; filename="customers.xlsx"');
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
+        // Return the response
+
+        //return sendSuccessResponse('Customers downloaded successfully!',200,$response);
+        if($response){
+            return $response;
+        }else{
+            return sendErrorResponse('Customers data not downloaded!', 422);
+        }
+    }
+
 }
