@@ -49,6 +49,7 @@ Route::middleware('api')->group(function () {
         Route::post('updatemember', [MemberController::class, 'update']);
         Route::post('members', [MemberController::class, 'index']);
         Route::put('updatememberstatus', [MemberController::class, 'updateMemberStatus']);
+        Route::post('download-members', [MemberController::class, 'downloadMembers']);
 
         //memberFinance
         Route::post('pay-advance-to-member', [MemberFinanceController::class, 'store']);

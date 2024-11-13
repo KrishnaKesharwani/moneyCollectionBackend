@@ -465,7 +465,7 @@ class CustomerController extends Controller
             $status = $request->status;
         }
 
-        $companyId = $request->company_id ?? 1;
+        $companyId = $request->company_id;
 
         // Create new Spreadsheet object
         $spreadsheet = new Spreadsheet();
