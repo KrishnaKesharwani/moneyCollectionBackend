@@ -173,5 +173,13 @@ class CustomerLoanRepository extends BaseRepository
             ->distinct('customer_id')
             ->count('customer_id');
     }
+
+    public function getCustomerLoansCount($company_id, $status) {
+        return $this->model->where('company_id', $company_id)
+               ->when($status, function ($query, $status) {
+                   return $query->where('status', $status);
+               })
+               ->count();
+    }
     // You can add any specific methods related to User here
 }

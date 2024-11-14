@@ -32,4 +32,12 @@ class CustomerRepository extends BaseRepository
     public function checkCustomerExist($company_id, $member_id){
         return $this->model->where('company_id', $company_id)->where('id', $member_id)->first();
     }
+
+    public function getCustomersCount($company_id, $status = null){
+        return $this->model->where('company_id', $company_id)
+                ->when($status, function ($query, $status) {
+                    return $query->where('status', $status);
+                })
+                ->count();        
+    }
 }

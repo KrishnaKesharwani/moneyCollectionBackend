@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Repositories\MemberRepository;
 use App\Repositories\CompanyRepository;
 use App\Repositories\UserRepository;
+use App\Repositories\ReportBackupRepository;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use exception;
@@ -27,16 +28,19 @@ class MemberController extends Controller
     protected $memberRepository;
     protected $companyRepository;
     protected $userRepository;
+    protected $reportBackupRepository;
 
     public function __construct(
         CompanyRepository $companyRepository,
         MemberRepository $memberRepository,
         UserRepository $userRepository,
+        ReportBackupRepository $reportBackupRepository
         )
     {
         $this->companyRepository        = $companyRepository;
         $this->memberRepository         = $memberRepository;
         $this->userRepository           = $userRepository;
+        $this->reportBackupRepository   = $reportBackupRepository;
     }
 
     public function index(Request $request){
@@ -405,6 +409,13 @@ class MemberController extends Controller
         // Return the response
 
         if($response){
+            $this->reportBackupRepository->create([
+                'company_id'    => $companyId,
+                'backup_type'   => 'member_list',
+                'backup_date'   => carbon::now()->format('Y-m-d'),
+                'search_data'   => json_encode($request->all()),
+                'backup_by'     => auth()->user()->id
+            ]);
             return $response;
         }else{
             return sendErrorResponse('Members data not downloaded!', 422);

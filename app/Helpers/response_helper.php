@@ -83,3 +83,16 @@ if(!function_exists('storeBase64Image')){
         return $directory.'/'.$fileName;
     }
 }
+
+if(!function_exists('reportTypes')){
+    function reportTypes(){
+        $reports = [
+            'customer_list' => 'Customer List',
+            'member_list' => 'Member List',
+            'loan_list' => 'Loan List',
+            'deposit_list' => 'Deposit List',
+            'offer_list' => 'Offer List',
+        ];
+        return $reports;
+    }
+}

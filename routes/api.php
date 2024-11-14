@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\MemberFinanceController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\FixedDepositController;
 use App\Http\Controllers\Api\FixedDepositHistoryController;
+use App\Http\Controllers\Api\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,7 +50,6 @@ Route::middleware('api')->group(function () {
         Route::post('updatemember', [MemberController::class, 'update']);
         Route::post('members', [MemberController::class, 'index']);
         Route::put('updatememberstatus', [MemberController::class, 'updateMemberStatus']);
-        Route::post('download-members', [MemberController::class, 'downloadMembers']);
 
         //memberFinance
         Route::post('pay-advance-to-member', [MemberFinanceController::class, 'store']);
@@ -63,7 +63,6 @@ Route::middleware('api')->group(function () {
         Route::post('customers', [CustomerController::class, 'index']);
         Route::put('updatecustomerstatus', [CustomerController::class, 'updateCustomerStatus']);
         Route::post('importcustomers', [CustomerController::class, 'importCustomers']);
-        Route::post('download-customers', [CustomerController::class, 'downloadCustomers']);
 
         //customerLoan
 
@@ -108,6 +107,11 @@ Route::middleware('api')->group(function () {
         Route::put('update-fd-status', [FixedDepositController::class, 'updateStatus']);
         Route::delete('delete-fixed-deposit/{id}', [FixedDepositController::class, 'destroy']);
         //Route::post('fixed-deposit-history', [CustomerDepositController::class, 'fixedDepositHistory']);
+
+        //report
+        Route::post('backup-list', [ReportController::class, 'index']);
+        Route::post('download-customers', [CustomerController::class, 'downloadCustomers']);
+        Route::post('download-members', [MemberController::class, 'downloadMembers']);
         
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);

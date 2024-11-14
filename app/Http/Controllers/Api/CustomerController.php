@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Repositories\CustomerRepository;
 use App\Repositories\CompanyRepository;
 use App\Repositories\UserRepository;
+use App\Repositories\ReportBackupRepository;
 use Carbon\Carbon;
 use exception;
 use Auth;
@@ -29,16 +30,19 @@ class CustomerController extends Controller
     protected $customerRepository;
     protected $companyRepository;
     protected $userRepository;
+    protected $reportBackupRepository;
 
     public function __construct(
         CompanyRepository $companyRepository,
-        customerRepository $customerRepository,
-        userRepository $userRepository
+        CustomerRepository $customerRepository,
+        UserRepository $userRepository,
+        ReportBackupRepository $reportBackupRepository
         )
     {
         $this->companyRepository        = $companyRepository;
         $this->customerRepository       = $customerRepository;
         $this->userRepository           = $userRepository;
+        $this->reportBackupRepository   = $reportBackupRepository;
     }
 
     public function index(Request $request){
@@ -515,6 +519,13 @@ class CustomerController extends Controller
 
         //return sendSuccessResponse('Customers downloaded successfully!',200,$response);
         if($response){
+            $this->reportBackupRepository->create([
+                'company_id'    => $companyId,
+                'backup_type'   => 'customer_list',
+                'backup_date'   => carbon::now()->format('Y-m-d'),
+                'search_data'   => json_encode($request->all()),
+                'backup_by'     => auth()->user()->id
+            ]);
             return $response;
         }else{
             return sendErrorResponse('Customers data not downloaded!', 422);

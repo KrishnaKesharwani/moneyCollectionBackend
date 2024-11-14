@@ -38,4 +38,12 @@ class MemberRepository extends BaseRepository
         return $this->model->where('company_id', $company_id)->where('id', $member_id)->first();
     }
 
+    public function getMembersCount($company_id, $status = null){
+        return $this->model->where('company_id', $company_id)
+                ->when($status, function ($query, $status) {
+                    return $query->where('status', $status);
+                })
+                ->count();        
+    }
+
 }

@@ -107,5 +107,14 @@ class CustomerDepositRepository extends BaseRepository
 
         return $history;
     }
+
+    public function getDepositsCount($company_id,$status = null){
+        return $this->model->where('company_id', $company_id)
+        ->when($status, function ($query, $status) {
+            return $query->where('status', $status);
+        })
+        ->count();
+        
+    }
     // You can add any specific methods related to User here
 }

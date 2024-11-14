@@ -33,4 +33,13 @@ class OfferRepository extends BaseRepository
     public function updateDefaultOffer($offerId,$companyId){
         return $this->model->where('id','!=',$offerId)->where('company_id',$companyId)->update(['default_offer' => 0]);
     }
+
+    public function getOffersCount($company_id, $status = null)
+    {
+        return $this->model->where('company_id', $company_id)
+                ->when($status, function ($query, $status) {
+                    return $query->where('status', $status);
+                })
+                ->count();
+    }
 }
