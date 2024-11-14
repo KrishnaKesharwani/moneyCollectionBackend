@@ -194,7 +194,11 @@ class CustomerLoanController extends Controller
         $validatedData = $request->all();
         
         try {
-            $customer = $this->customerRepository->find($request->customer_id);
+            $customer = $this->customerRepository->getById($request->customer_id);
+            if(empty($customer))
+            {
+                return sendErrorResponse('Customer not found!', 404);
+            }
             $loanCount = $customer->loan_count;
             DB::beginTransaction();
 
@@ -267,7 +271,7 @@ class CustomerLoanController extends Controller
             }
         }
         catch (Exception $e) {
-            return sendErrorResponse($e->getMessage(), 500);
+            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
         }
     }
 
