@@ -24,6 +24,10 @@ class CustomerDepositRepository extends BaseRepository
         ->where('status', 'active');
     }
 
+    public function getTotalCustomerByDepositIds($depositIds){
+        return $this->model->whereIn('id', $depositIds)->distinct('customer_id')->count();
+    }
+
     public function getAllCustomerDeposits($company_id, $status = null,$memberId = null,$customerId = null)
     {
         $deposits = $this->model->with('customer', 'member','depositHistory', 'depositHistory.recieved_member')

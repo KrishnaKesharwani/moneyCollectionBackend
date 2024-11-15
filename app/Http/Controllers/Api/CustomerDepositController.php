@@ -324,6 +324,7 @@ class CustomerDepositController extends Controller
             $year   = carbon::now()->year;
             $customerId = $request->customer_id ?? null;
             $activeDeposits = $this->customerDepositRepository->getAllActiveDeposits($request->company_id,$customerId)->pluck('id');
+            $transDepositIds = [];
 
             if(count($activeDeposits) > 0)
             {
@@ -331,14 +332,16 @@ class CustomerDepositController extends Controller
                 $data = [];
                 for($i = 0; $i < 6; $i++)
                 {
+
                     $startDate = Carbon::createFromDate($year, $month-$i, 1)->format('Y-m-d');
                     //current month end date
                     $endDate = Carbon::createFromDate($year, $month-$i, 1)->endOfMonth()->format('Y-m-d');
                     //get month name from start date
                     $monthName = Carbon::createFromDate($year, $month-$i, 1)->format('M');
 
-                    $depositAmount  = $this->depositHistoryRepository->getDepositAmountByDate($activeDeposits,'credit',$startDate,$endDate);
-                    $withdrawAmount = $this->depositHistoryRepository->getDepositAmountByDate($activeDeposits,'debit',$startDate,$endDate);
+                    $depositAmount      = $this->depositHistoryRepository->getDepositAmountByDate($activeDeposits,'credit',$startDate,$endDate);
+                    $withdrawAmount     = $this->depositHistoryRepository->getDepositAmountByDate($activeDeposits,'debit',$startDate,$endDate);
+                    $transDepositIds[]  = $this->depositHistoryRepository->getDepositIdByDate($activeDeposits,$startDate,$endDate);
                     $data[$i] = [
                         'month' => $monthName,
                         'deposit_amount' => (float)$depositAmount,
@@ -348,7 +351,18 @@ class CustomerDepositController extends Controller
                     ];
                 }
                 
-                return sendSuccessResponse('Deposits found successfully!', 200, $data);
+
+                $mergedArray = array_unique(array_merge(...$transDepositIds));
+                $totalCustomer = 0;
+                if(count($mergedArray) > 0)
+                {
+                    $totalCustomer = $this->customerDepositRepository->getTotalCustomerByDepositIds($mergedArray);
+                }
+                $response = [   
+                    'graphdata' => $data,
+                    'total_customer' => (int)$totalCustomer
+                ];
+                return sendSuccessResponse('Deposits found successfully!', 200, $response);
             }
             else
             {

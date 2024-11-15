@@ -18,6 +18,10 @@ class DepositHistoryRepository extends BaseRepository
         return $this->model->where('deposit_id', $depositId)->where('action_type', $type)->sum('amount');
     }
 
+    public function getDepositIdByDate($depositId,$fromDate,$toDate){
+        return $this->model->whereIn('deposit_id', $depositId)->whereDate('action_date','>=', $fromDate)->whereDate('action_date','<=', $toDate)->pluck('deposit_id')->toArray();
+    }
+
     public function getDepositAmountByDate($depositId, $type,$fromDate,$toDate){
         return $this->model->whereIn('deposit_id', $depositId)->where('action_type', $type)->whereDate('action_date','>=', $fromDate)->whereDate('action_date','<=', $toDate)->sum('amount');
     }
