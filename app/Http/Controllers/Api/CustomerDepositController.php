@@ -13,9 +13,15 @@ use App\Repositories\CustomerRepository;
 use App\Repositories\DepositMemberHistoryRepository;
 use App\Repositories\DepositHistoryRepository;
 use App\Repositories\MemberRepository;
+use App\Repositories\ReportBackupRepository;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use exception;
+
+//excel library for download excel
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CustomerDepositController extends Controller
 {
@@ -25,20 +31,24 @@ class CustomerDepositController extends Controller
     protected $depositeMemberHistoryRepository;
     protected $depositHistoryRepository;
     protected $memberRepository;
+    protected $reportBackupRepository;
 
     public function __construct(
         CustomerRepository $customerRepository,
         CustomerDepositRepository $customerDepositRepository,
         DepositMemberHistoryRepository $depositeMemberHistoryRepository,
         DepositHistoryRepository $depositHistoryRepository,
-        MemberRepository $memberRepository
+        MemberRepository $memberRepository,
+        ReportBackupRepository $reportBackupRepository
+
         )
     {
-        $this->customerRepository                       = $customerRepository;
+        $this->customerRepository                      = $customerRepository;
         $this->customerDepositRepository               = $customerDepositRepository;;
-        $this->depositeMemberHistoryRepository          = $depositeMemberHistoryRepository;
+        $this->depositeMemberHistoryRepository         = $depositeMemberHistoryRepository;
         $this->depositHistoryRepository                = $depositHistoryRepository;
-        $this->memberRepository                         = $memberRepository;
+        $this->memberRepository                        = $memberRepository;
+        $this->reportBackupRepository                  = $reportBackupRepository;
     }
 
     public function index(Request $request){
@@ -347,6 +357,91 @@ class CustomerDepositController extends Controller
         }
         catch (\Exception $e) {
             return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        }
+    }
+
+    public function downloadDepositList(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required|exists:companies,id',
+            'status' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $status = null;
+        if ($request->status == 'all') {
+            $status = null;
+        } else {
+            $status = $request->status;
+        }
+
+        $companyId  = $request->company_id ?? 1;
+
+        // Create new Spreadsheet object
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set the header
+        $sheet->setCellValue('A1', 'Serial No');
+        $sheet->setCellValue('B1', 'Deposit Number');
+        $sheet->setCellValue('C1', 'Details');
+        $sheet->setCellValue('D1', 'Member Name');
+        $sheet->setCellValue('E1', 'Customer Name');
+        $sheet->setCellValue('F1', 'Status');
+        $sheet->setCellValue('G1', 'Deposit Amount');
+        $sheet->setCellValue('H1', 'Withdraw Amount');
+
+
+        // Retrieve your data from the database (example: getting users)
+        $deposits = $this->customerDepositRepository->getAllCustomerDeposits($companyId,$status);
+
+        // Populate the spreadsheet with data
+        $row = 2; // Start from row 2 to avoid overwriting headers
+        foreach ($deposits as $deposit) {
+            $memberName     = isset($deposit->member) && $deposit->member!=null ? $deposit->member->name : '';
+            $customerName   = isset($deposit->customer) && $deposit->customer!=null ? $deposit->customer->name : '';
+            $depositAmount  = $this->depositHistoryRepository->getTotalDepositAmount($deposit->id,'credit');
+            $withdrawAmount = $this->depositHistoryRepository->getTotalDepositAmount($deposit->id,'debit');
+            
+            $sheet->setCellValue('A' . $row, $row-1);
+            $sheet->setCellValue('B' . $row, $deposit->deposit_no);
+            $sheet->setCellValue('c' . $row, $deposit->details);
+            $sheet->setCellValue('d' . $row, $memberName);
+            $sheet->setCellValue('e' . $row, $customerName);
+            $sheet->setCellValue('f' . $row, $deposit->status);
+            $sheet->setCellValue('g' . $row, $depositAmount);
+            $sheet->setCellValue('h' . $row, $withdrawAmount);
+            $row++;
+        }
+
+        // Set up the response for download
+        $response = new StreamedResponse(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output'); // Stream the file directly to the response
+        });
+
+        // Set headers for file download
+        $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $response->headers->set('Content-Disposition', 'attachment; filename="Deposit.xlsx"');
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
+        // Return the response
+
+        if($response){
+            $this->reportBackupRepository->create([
+                'company_id'    => $companyId,
+                'backup_type'   => 'deposit_list',
+                'backup_date'   => carbon::now()->format('Y-m-d'),
+                'search_data'   => json_encode($request->all()),
+                'backup_by'     => auth()->user()->id
+            ]);
+            return $response;
+        }else{
+            return sendErrorResponse('Deposit data not downloaded!', 422);
         }
     }
 }

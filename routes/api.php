@@ -112,7 +112,9 @@ Route::middleware('api')->group(function () {
         Route::post('backup-list', [ReportController::class, 'index']);
         Route::post('download-customers', [CustomerController::class, 'downloadCustomers']);
         Route::post('download-members', [MemberController::class, 'downloadMembers']);
-        
+        Route::post('download-offers', [OfferController::class, 'downloadOffers']);
+        Route::post('download-loans', [CustomerLoanController::class, 'downloadLoanList']);
+        Route::post('download-deposits', [CustomerDepositController::class, 'downloadDepositList']);
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);
     });

@@ -7,20 +7,28 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Repositories\OfferRepository;
+use App\Repositories\ReportBackupRepository;
 use Carbon\Carbon;
 use exception;
+//excel library for download excel
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OfferController extends Controller
 {
 
 
     protected $offerRepository;
+    protected $reportBackupRepository;
 
     public function __construct(
         OfferRepository $offerRepository,
+        ReportBackupRepository $reportBackupRepository
         )
     {
         $this->offerRepository          = $offerRepository;
+        $this->reportBackupRepository   = $reportBackupRepository;
     }
 
     public function index(Request $request){
@@ -203,7 +211,8 @@ class OfferController extends Controller
         }
     }
 
-    public function updateDefaultOffer(Request $request){
+    public function updateDefaultOffer(Request $request)
+    {
 
         $validator = Validator::make($request->all(), [
             'offer_id' => 'required',
@@ -259,6 +268,82 @@ class OfferController extends Controller
         else
         {
             return sendErrorResponse('Offer not found!', 404);
+        }
+    }
+
+    public function downloadOffers(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required|exists:companies,id',
+            'status' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $status = null;
+        if ($request->status == 'all') {
+            $status = null;
+        } else {
+            $status = $request->status;
+        }
+
+        $companyId = $request->company_id;
+
+        // Create new Spreadsheet object
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set the header
+        $sheet->setCellValue('A1', 'Serial No');
+        $sheet->setCellValue('B1', 'Name');
+        $sheet->setCellValue('C1', 'Type');
+        $sheet->setCellValue('D1', 'Status');
+        $sheet->setCellValue('E1', 'Details');
+        $sheet->setCellValue('F1', 'Default Offer');
+
+
+        // Retrieve your data from the database (example: getting users)
+        $offers = $this->offerRepository->getAllOffers($companyId, $status);
+
+        // Populate the spreadsheet with data
+        $row = 2; // Start from row 2 to avoid overwriting headers
+        foreach ($offers as $offer) {
+            $sheet->setCellValue('A' . $row, $row-1);
+            $sheet->setCellValue('B' . $row, $offer->name);
+            $sheet->setCellValue('c' . $row, $offer->type);
+            $sheet->setCellValue('d' . $row, $offer->status);
+            $sheet->setCellValue('e' . $row, $offer->details);
+            $sheet->setCellValue('f' . $row, ($offer->default_offer==1)?'Yes':'No');
+            $row++;
+        }
+
+        // Set up the response for download
+        $response = new StreamedResponse(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output'); // Stream the file directly to the response
+        });
+
+        // Set headers for file download
+        $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $response->headers->set('Content-Disposition', 'attachment; filename="offers.xlsx"');
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
+        // Return the response
+
+        if($response){
+            $this->reportBackupRepository->create([
+                'company_id'    => $companyId,
+                'backup_type'   => 'offer_list',
+                'backup_date'   => carbon::now()->format('Y-m-d'),
+                'search_data'   => json_encode($request->all()),
+                'backup_by'     => auth()->user()->id
+            ]);
+            return $response;
+        }else{
+            return sendErrorResponse('Offers data not downloaded!', 422);
         }
     }
 }

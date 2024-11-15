@@ -16,9 +16,14 @@ use App\Repositories\LoanDocumentRepository;
 use App\Repositories\LoanHistoryRepository;
 use App\Repositories\DepositHistoryRepository;
 use App\Repositories\MemberRepository;
+use App\Repositories\ReportBackupRepository;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use exception;
+//excel library for download excel
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CustomerLoanController extends Controller
 {
@@ -31,6 +36,7 @@ class CustomerLoanController extends Controller
     protected $loanHistoryRepository;
     protected $depositHistoryRepository;
     protected $memberRepository;
+    protected $reportBackupRepository;
 
     public function __construct(
         CustomerRepository $customerRepository,
@@ -40,7 +46,8 @@ class CustomerLoanController extends Controller
         LoanDocumentRepository $loanDocumentRepository,
         LoanHistoryRepository $loanHistoryRepository,
         DepositHistoryRepository $depositHistoryRepository,
-        MemberRepository $memberRepository
+        MemberRepository $memberRepository,
+        ReportBackupRepository $reportBackupRepository
         )
     {
         $this->customerRepository                   = $customerRepository;
@@ -51,6 +58,7 @@ class CustomerLoanController extends Controller
         $this->loanHistoryRepository                = $loanHistoryRepository;
         $this->depositHistoryRepository             = $depositHistoryRepository;
         $this->memberRepository                     = $memberRepository;
+        $this->reportBackupRepository               = $reportBackupRepository;
     }
 
     public function index(Request $request){
@@ -771,7 +779,7 @@ class CustomerLoanController extends Controller
         }
 
         try{
-            $memberId            = $request->member_id ?? null;
+            $memberId           = $request->member_id ?? null;
             $totalLoanAmount    = $this->customerLoanRepository->getTotalLoanAmount($request->company_id,$memberId);
             $loanIds            = $this->customerLoanRepository->getRunningLoanIds($request->company_id,$memberId);
             $totalCustomerCount = $this->customerLoanRepository->getTotalCustomer($request->company_id,'paid',$memberId);
@@ -926,6 +934,120 @@ class CustomerLoanController extends Controller
         }
         catch (\Exception $e) {
             return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        }
+    }
+
+    public function downloadLoanList(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required|exists:companies,id',
+            'status' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $status = null;
+        if ($request->status == 'all') {
+            $status = null;
+        } else {
+            $status = $request->status;
+        }
+
+        $companyId  = $request->company_id ?? 1;
+        $loanStatus = $request->loan_status ?? null;
+
+        // Create new Spreadsheet object
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set the header
+        $sheet->setCellValue('A1', 'Serial No');
+        $sheet->setCellValue('B1', 'Loan Number');
+        $sheet->setCellValue('C1', 'Loan Amount');
+        $sheet->setCellValue('D1', 'Installment Amount');
+        $sheet->setCellValue('E1', 'No. of Days');
+        $sheet->setCellValue('F1', 'Start Date');
+        $sheet->setCellValue('G1', 'End Date');
+        $sheet->setCellValue('H1', 'Details');
+        $sheet->setCellValue('I1', 'Member Name');
+        $sheet->setCellValue('J1', 'Customer Name');
+        $sheet->setCellValue('K1', 'Applied By');
+        $sheet->setCellValue('L1', 'Status');
+        $sheet->setCellValue('M1', 'Loan Status');
+        $sheet->setCellValue('N1', 'Paid Amount');
+        $sheet->setCellValue('O1', 'Remaining Amount');
+
+
+        // Retrieve your data from the database (example: getting users)
+        $loans = $this->customerLoanRepository->getAllCustomerLoans($companyId,$loanStatus,$status);
+
+        // Populate the spreadsheet with data
+        $row = 2; // Start from row 2 to avoid overwriting headers
+        foreach ($loans as $loan) {
+            $memberName = isset($loan->member) && $loan->member!=null ? $loan->member->name : '';
+            $customerName = isset($loan->customer) && $loan->customer!=null ? $loan->customer->name : '';
+            $appliedBy  = '';
+            if($loan->applied_user_type==3)
+            {
+                $appliedBy = 'self';
+            }
+            else if($loan->applied_user_type==2){
+                $member = $this->memberRepository->getMemberByUserId($loan->applied_by);
+                if($member)
+                {
+                    $appliedBy = $member->name;
+                }
+            }
+            
+            $paidAmount = $this->loanHistoryRepository->getTotalPaidAmount($loan->id);
+            $paidAmount = (float)$paidAmount;
+            $remaingAmount = (float)($loan->loan_amount - $paidAmount);
+
+            $sheet->setCellValue('A' . $row, $row-1);
+            $sheet->setCellValue('B' . $row, $loan->loan_no);
+            $sheet->setCellValue('c' . $row, $loan->loan_amount);
+            $sheet->setCellValue('d' . $row, $loan->installment_amount);
+            $sheet->setCellValue('e' . $row, $loan->no_of_days);
+            $sheet->setCellValue('f' . $row, $loan->start_date);
+            $sheet->setCellValue('g' . $row, $loan->end_date);
+            $sheet->setCellValue('h' . $row, $loan->details);
+            $sheet->setCellValue('i' . $row, $memberName);
+            $sheet->setCellValue('j' . $row, $customerName);
+            $sheet->setCellValue('k' . $row, $appliedBy);
+            $sheet->setCellValue('l' . $row, $loan->status);
+            $sheet->setCellValue('m' . $row, $loan->loan_status);
+            $sheet->setCellValue('n' . $row, $paidAmount);
+            $sheet->setCellValue('o' . $row, $remaingAmount);
+            $row++;
+        }
+
+        // Set up the response for download
+        $response = new StreamedResponse(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output'); // Stream the file directly to the response
+        });
+
+        // Set headers for file download
+        $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $response->headers->set('Content-Disposition', 'attachment; filename="Loans.xlsx"');
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
+        // Return the response
+
+        if($response){
+            $this->reportBackupRepository->create([
+                'company_id'    => $companyId,
+                'backup_type'   => 'loan_list',
+                'backup_date'   => carbon::now()->format('Y-m-d'),
+                'search_data'   => json_encode($request->all()),
+                'backup_by'     => auth()->user()->id
+            ]);
+            return $response;
+        }else{
+            return sendErrorResponse('Offers data not downloaded!', 422);
         }
     }
 }
