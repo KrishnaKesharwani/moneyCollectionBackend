@@ -13,7 +13,7 @@ class CustomerLoanRepository extends BaseRepository
 
     
     public function getLoanById($id){
-        return $this->model->where('id', $id)->with('customer', 'member', 'document')->first();
+        return $this->model->where('id', $id)->with('customer', 'member', 'document', 'loanHistory', 'loanHistory.recieved_member')->first();
     }
 
     /**

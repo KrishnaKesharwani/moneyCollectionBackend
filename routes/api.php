@@ -115,6 +115,7 @@ Route::middleware('api')->group(function () {
         Route::post('download-offers', [OfferController::class, 'downloadOffers']);
         Route::post('download-loans', [CustomerLoanController::class, 'downloadLoanList']);
         Route::post('download-deposits', [CustomerDepositController::class, 'downloadDepositList']);
+        Route::post('download-loan-history', [CustomerLoanController::class, 'downloadLoanHistory']);
         //change password
         Route::post('changepassword', [UserController::class, 'changePassword']);
     });

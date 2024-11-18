@@ -1050,4 +1050,130 @@ class CustomerLoanController extends Controller
             return sendErrorResponse('Offers data not downloaded!', 422);
         }
     }
+
+    public function downloadLoanHistory(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'loan_id' => 'required|exists:customer_loans,id',
+        ]);
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $loanId = $request->loan_id;
+        
+
+        // Create new Spreadsheet object
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set the header
+        $sheet->setCellValue('A1', 'Serial No');
+        $sheet->setCellValue('B1', 'Loan Number');
+        $sheet->setCellValue('C1', 'Loan Amount');
+        $sheet->setCellValue('D1', 'Installment Amount');
+        $sheet->setCellValue('E1', 'No. of Days');
+        $sheet->setCellValue('F1', 'Start Date');
+        $sheet->setCellValue('G1', 'End Date');
+        $sheet->setCellValue('H1', 'Details');
+        $sheet->setCellValue('I1', 'Member Name');
+        $sheet->setCellValue('J1', 'Customer Name');
+        $sheet->setCellValue('K1', 'Applied By');
+        $sheet->setCellValue('L1', 'Status');
+        $sheet->setCellValue('M1', 'Loan Status');
+        $sheet->setCellValue('N1', 'Paid Amount');
+        $sheet->setCellValue('O1', 'Remaining Amount');
+
+
+        // Retrieve your data from the database (example: getting users)
+        $loan           = $this->customerLoanRepository->getLoanById($loanId);
+        $loanHistory    = $loan?->loanHistory;
+
+        // Populate the spreadsheet with data
+        $row = 2; // Start from row 2 to avoid overwriting headers
+    
+        $memberName = isset($loan->member) && $loan->member!=null ? $loan->member->name : '';
+        $customerName = isset($loan->customer) && $loan->customer!=null ? $loan->customer->name : '';
+        $appliedBy  = '';
+        if($loan->applied_user_type==3)
+        {
+            $appliedBy = 'self';
+        }
+        else if($loan->applied_user_type==2){
+            $member = $this->memberRepository->getMemberByUserId($loan->applied_by);
+            if($member)
+            {
+                $appliedBy = $member->name;
+            }
+        }
+        
+        $paidAmount = $this->loanHistoryRepository->getTotalPaidAmount($loan->id);
+        $paidAmount = (float)$paidAmount;
+        $remaingAmount = (float)($loan->loan_amount - $paidAmount);
+
+        $sheet->setCellValue('A' . $row, $row-1);
+        $sheet->setCellValue('B' . $row, $loan->loan_no);
+        $sheet->setCellValue('c' . $row, $loan->loan_amount);
+        $sheet->setCellValue('d' . $row, $loan->installment_amount);
+        $sheet->setCellValue('e' . $row, $loan->no_of_days);
+        $sheet->setCellValue('f' . $row, $loan->start_date);
+        $sheet->setCellValue('g' . $row, $loan->end_date);
+        $sheet->setCellValue('h' . $row, $loan->details);
+        $sheet->setCellValue('i' . $row, $memberName);
+        $sheet->setCellValue('j' . $row, $customerName);
+        $sheet->setCellValue('k' . $row, $appliedBy);
+        $sheet->setCellValue('l' . $row, $loan->status);
+        $sheet->setCellValue('m' . $row, $loan->loan_status);
+        $sheet->setCellValue('n' . $row, $paidAmount);
+        $sheet->setCellValue('o' . $row, $remaingAmount);
+        
+        if(count($loanHistory)>0)
+        {
+            $sheet->setCellValue('A4', 'Loan History');
+            
+          
+            $sheet->setCellValue('A5', 'Serial No');
+            $sheet->setCellValue('B5', 'Amount');
+            $sheet->setCellValue('C5', 'Paid Date');
+            $sheet->setCellValue('D5', 'Member Name');
+            
+            $row = 6;
+            foreach ($loanHistory as $key => $history) {
+                $sheet->setCellValue('A' . $row, $key+1);
+                $sheet->setCellValue('B' . $row, $history->amount);
+                $sheet->setCellValue('C' . $row, carbon::parse($history->paid_date)->format('Y-m-d'));
+                $sheet->setCellValue('D' . $row, isset($history->recieved_member) && $history->recieved_member!=null ? $history->recieved_member->name:'');
+                $row++;
+            }
+        }
+    
+
+        // Set up the response for download
+        $response = new StreamedResponse(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output'); // Stream the file directly to the response
+        });
+
+        // Set headers for file download
+        $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $response->headers->set('Content-Disposition', 'attachment; filename="'.$loan->loan_no.'.xlsx"');
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
+        // Return the response
+
+        if($response){
+            $this->reportBackupRepository->create([
+                'company_id'    => $loan->company_id,
+                'backup_type'   => 'customer_loan_list',
+                'backup_date'   => carbon::now()->format('Y-m-d'),
+                'search_data'   => json_encode($request->all()),
+                'backup_by'     => auth()->user()->id
+            ]);
+            return $response;
+        }else{
+            return sendErrorResponse('Offers data not downloaded!', 422);
+        }
+    }
 }
