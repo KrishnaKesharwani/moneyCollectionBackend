@@ -96,3 +96,15 @@ if(!function_exists('reportTypes')){
         return $reports;
     }
 }
+
+if(!function_exists('downloadFileUrl')){
+    function downloadFileUrl($fileName){
+        $path = 'storage/app/exports/'.$fileName;
+        $url = [
+            'simple_url' => $path,
+            'full_url' => url($path)
+        ];
+
+        return $url;
+    }
+}

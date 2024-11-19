@@ -1023,32 +1023,34 @@ class CustomerLoanController extends Controller
             $row++;
         }
 
-        // Set up the response for download
-        $response = new StreamedResponse(function () use ($spreadsheet) {
-            $writer = new Xlsx($spreadsheet);
-            $writer->save('php://output'); // Stream the file directly to the response
-        });
 
-        // Set headers for file download
-        $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        $response->headers->set('Content-Disposition', 'attachment; filename="Loans.xlsx"');
-        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        $response->headers->set('Pragma', 'no-cache');
-        $response->headers->set('Expires', '0');
-        // Return the response
+        // Define a unique file name
+        $fileName = 'Loans_' . time() . '.xlsx';
+        $filePath = 'exports/' . $fileName;
 
-        if($response){
-            $this->reportBackupRepository->create([
-                'company_id'    => $companyId,
-                'backup_type'   => 'loan_list',
-                'backup_date'   => carbon::now()->format('Y-m-d'),
-                'search_data'   => json_encode($request->all()),
-                'backup_by'     => auth()->user()->id
-            ]);
-            return $response;
-        }else{
-            return sendErrorResponse('Offers data not downloaded!', 422);
-        }
+        // Save the spreadsheet to storage
+        $writer = new Xlsx($spreadsheet);
+        ob_start(); // Start output buffering
+        $writer->save('php://output'); // Write the file content to the output buffer
+        $fileContent = ob_get_clean(); // Get the content and clear the buffer
+
+        Storage::put($filePath, $fileContent); // Save the content to storage
+        //return sendSuccessResponse('Customers downloaded successfully!',200,$response);
+        $this->reportBackupRepository->create([
+            'company_id'    => $companyId,
+            'backup_type'   => 'loan_list',
+            'backup_date'   => carbon::now()->format('Y-m-d'),
+            'search_data'   => json_encode($request->all()),
+            'backup_by'     => auth()->user()->id
+        ]);
+
+        // Generate a signed URL for secure download (optional)
+        $downloadUrl = Storage::url($filePath);
+        //add domain to download url
+        $fullUrl = downloadFileUrl($fileName);
+
+        // Return success response with download URL
+        return sendSuccessResponse('Loan data is ready for download.',200, ['download_url' => $fullUrl]);
     }
 
     public function downloadLoanHistory(Request $request)
@@ -1149,31 +1151,32 @@ class CustomerLoanController extends Controller
         }
     
 
-        // Set up the response for download
-        $response = new StreamedResponse(function () use ($spreadsheet) {
-            $writer = new Xlsx($spreadsheet);
-            $writer->save('php://output'); // Stream the file directly to the response
-        });
+        // Define a unique file name
+        $fileName = $loan->loan_no.'_'. time() . '.xlsx';
+        $filePath = 'exports/' . $fileName;
 
-        // Set headers for file download
-        $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        $response->headers->set('Content-Disposition', 'attachment; filename="'.$loan->loan_no.'.xlsx"');
-        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        $response->headers->set('Pragma', 'no-cache');
-        $response->headers->set('Expires', '0');
-        // Return the response
+        // Save the spreadsheet to storage
+        $writer = new Xlsx($spreadsheet);
+        ob_start(); // Start output buffering
+        $writer->save('php://output'); // Write the file content to the output buffer
+        $fileContent = ob_get_clean(); // Get the content and clear the buffer
 
-        if($response){
-            $this->reportBackupRepository->create([
-                'company_id'    => $loan->company_id,
-                'backup_type'   => 'customer_loan_list',
-                'backup_date'   => carbon::now()->format('Y-m-d'),
-                'search_data'   => json_encode($request->all()),
-                'backup_by'     => auth()->user()->id
-            ]);
-            return $response;
-        }else{
-            return sendErrorResponse('Offers data not downloaded!', 422);
-        }
+        Storage::put($filePath, $fileContent); // Save the content to storage
+        //return sendSuccessResponse('Customers downloaded successfully!',200,$response);
+        $this->reportBackupRepository->create([
+            'company_id'    => $loan->company_id,
+            'backup_type'   => 'customer_loan_list',
+            'backup_date'   => carbon::now()->format('Y-m-d'),
+            'search_data'   => json_encode($request->all()),
+            'backup_by'     => auth()->user()->id
+        ]);
+
+        // Generate a signed URL for secure download (optional)
+        $downloadUrl = Storage::url($filePath);
+        //add domain to download url
+        $fullUrl = downloadFileUrl($fileName);
+
+        // Return success response with download URL
+        return sendSuccessResponse('loan details is ready for download.',200, ['download_url' => $fullUrl]);
     }
 }

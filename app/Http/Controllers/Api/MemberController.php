@@ -343,6 +343,7 @@ class MemberController extends Controller
 
     public function downloadMembers(Request $request)
     {
+        // Validate the request
         $validator = Validator::make($request->all(), [
             'company_id' => 'required|exists:companies,id',
             'status' => 'required',
@@ -352,12 +353,7 @@ class MemberController extends Controller
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
-        if ($request->status == 'all') {
-            $status = null;
-        } else {
-            $status = $request->status;
-        }
-
+        $status = $request->status === 'all' ? null : $request->status;
         $companyId = $request->company_id;
 
         // Create new Spreadsheet object
@@ -365,60 +361,59 @@ class MemberController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
 
         // Set the header
-        $sheet->setCellValue('A1', 'Serial No');
-        $sheet->setCellValue('B1', 'Member Number');
-        $sheet->setCellValue('C1', 'Name');
-        $sheet->setCellValue('D1', 'Email');
-        $sheet->setCellValue('E1', 'Mobile');
-        $sheet->setCellValue('F1', 'Address');
-        $sheet->setCellValue('G1', 'Join Date');
-        $sheet->setCellValue('H1', 'Balance');
-        $sheet->setCellValue('I1', 'Status');
+        $headers = ['A1' => 'Serial No', 'B1' => 'Member Number', 'C1' => 'Name', 'D1' => 'Email',
+                'E1' => 'Mobile', 'F1' => 'Address', 'G1' => 'Join Date', 'H1' => 'Balance',
+                'I1' => 'Status'];
+        foreach ($headers as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
 
-
-        // Retrieve your data from the database (example: getting users)
+        // Retrieve data from the database
         $customers = $this->memberRepository->getAllMembers($companyId, $status);
 
         // Populate the spreadsheet with data
         $row = 2; // Start from row 2 to avoid overwriting headers
         foreach ($customers as $customer) {
-            $sheet->setCellValue('A' . $row, $row-1);
+            $sheet->setCellValue('A' . $row, $row - 1);
             $sheet->setCellValue('B' . $row, $customer->member_no);
-            $sheet->setCellValue('c' . $row, $customer->name);
-            $sheet->setCellValue('d' . $row, $customer->email);
-            $sheet->setCellValue('e' . $row, $customer->mobile);
-            $sheet->setCellValue('f' . $row, $customer->address);
-            $sheet->setCellValue('g' . $row, $customer->join_date);
-            $sheet->setCellValue('h' . $row, $customer->balance);
+            $sheet->setCellValue('C' . $row, $customer->name);
+            $sheet->setCellValue('D' . $row, $customer->email);
+            $sheet->setCellValue('E' . $row, $customer->mobile);
+            $sheet->setCellValue('F' . $row, $customer->address);
+            $sheet->setCellValue('G' . $row, $customer->join_date);
+            $sheet->setCellValue('H' . $row, $customer->balance);
             $sheet->setCellValue('I' . $row, $customer->status);
             $row++;
         }
 
-        // Set up the response for download
-        $response = new StreamedResponse(function () use ($spreadsheet) {
-            $writer = new Xlsx($spreadsheet);
-            $writer->save('php://output'); // Stream the file directly to the response
-        });
+        // Define a unique file name
+        $fileName = 'members_' . time() . '.xlsx';
+        $filePath = 'exports/' . $fileName;
 
-        // Set headers for file download
-        $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        $response->headers->set('Content-Disposition', 'attachment; filename="members.xlsx"');
-        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        $response->headers->set('Pragma', 'no-cache');
-        $response->headers->set('Expires', '0');
-        // Return the response
+        // Save the spreadsheet to storage
+        $writer = new Xlsx($spreadsheet);
+        ob_start(); // Start output buffering
+        $writer->save('php://output'); // Write the file content to the output buffer
+        $fileContent = ob_get_clean(); // Get the content and clear the buffer
 
-        if($response){
-            $this->reportBackupRepository->create([
-                'company_id'    => $companyId,
-                'backup_type'   => 'member_list',
-                'backup_date'   => carbon::now()->format('Y-m-d'),
-                'search_data'   => json_encode($request->all()),
-                'backup_by'     => auth()->user()->id
-            ]);
-            return $response;
-        }else{
-            return sendErrorResponse('Members data not downloaded!', 422);
-        }
+        Storage::put($filePath, $fileContent); // Save the content to storage
+
+        // Create backup record
+        $this->reportBackupRepository->create([
+            'company_id'  => $companyId,
+            'backup_type' => 'member_list',
+            'backup_date' => Carbon::now()->format('Y-m-d'),
+            'search_data' => json_encode($request->all()),
+            'backup_by'   => auth()->user()->id
+        ]);
+
+        // Generate a signed URL for secure download (optional)
+        $downloadUrl = Storage::url($filePath);
+        //add domain to download url
+        $fullUrl = downloadFileUrl($fileName);
+
+        // Return success response with download URL
+        return sendSuccessResponse('Members data is ready for download.',200, ['download_url' => $fullUrl]);
+
     }
 }

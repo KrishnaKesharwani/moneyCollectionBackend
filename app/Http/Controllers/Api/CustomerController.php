@@ -503,33 +503,33 @@ class CustomerController extends Controller
             $row++;
         }
 
-        // Set up the response for download
-        $response = new StreamedResponse(function () use ($spreadsheet) {
-            $writer = new Xlsx($spreadsheet);
-            $writer->save('php://output'); // Stream the file directly to the response
-        });
+        // Define a unique file name
+        $fileName = 'customers_' . time() . '.xlsx';
+        $filePath = 'exports/' . $fileName;
 
-        // Set headers for file download
-        $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        $response->headers->set('Content-Disposition', 'attachment; filename="customers.xlsx"');
-        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        $response->headers->set('Pragma', 'no-cache');
-        $response->headers->set('Expires', '0');
-        // Return the response
+        // Save the spreadsheet to storage
+        $writer = new Xlsx($spreadsheet);
+        ob_start(); // Start output buffering
+        $writer->save('php://output'); // Write the file content to the output buffer
+        $fileContent = ob_get_clean(); // Get the content and clear the buffer
 
+        Storage::put($filePath, $fileContent); // Save the content to storage
         //return sendSuccessResponse('Customers downloaded successfully!',200,$response);
-        if($response){
-            $this->reportBackupRepository->create([
-                'company_id'    => $companyId,
-                'backup_type'   => 'customer_list',
-                'backup_date'   => carbon::now()->format('Y-m-d'),
-                'search_data'   => json_encode($request->all()),
-                'backup_by'     => auth()->user()->id
-            ]);
-            return $response;
-        }else{
-            return sendErrorResponse('Customers data not downloaded!', 422);
-        }
+        $this->reportBackupRepository->create([
+            'company_id'    => $companyId,
+            'backup_type'   => 'customer_list',
+            'backup_date'   => carbon::now()->format('Y-m-d'),
+            'search_data'   => json_encode($request->all()),
+            'backup_by'     => auth()->user()->id
+        ]);
+
+        // Generate a signed URL for secure download (optional)
+        $downloadUrl = Storage::url($filePath);
+        //add domain to download url
+        $fullUrl = downloadFileUrl($fileName);
+
+        // Return success response with download URL
+        return sendSuccessResponse('customers data is ready for download.',200, ['download_url' => $fullUrl]);
     }
 
 }
