@@ -385,6 +385,7 @@ class CustomerDepositController extends Controller
         $validator = Validator::make($request->all(), [
             'deposit_id' => 'required|integer|exists:customer_deposits,id',
             'status' => 'required',
+            'status_changed_reason' => 'required|string',
         ]);
         
 
@@ -396,18 +397,22 @@ class CustomerDepositController extends Controller
             $depositId = $request->deposit_id;
             $updateDepositData = [
                 'status' => $request->status,
+                'status_changed_reason' => $request->status_changed_reason,
+                'status_changed_by' => auth()->user()->id,
+                'status_changed_at' => Carbon::now(),
             ];
             
             $deposit = $this->customerDepositRepository->update($depositId,$updateDepositData);
 
             if($deposit)
             {
+                $depositData = $this->customerDepositRepository->find($depositId);
                 if($request->status == 'active')
                 {
-                    return sendSuccessResponse('Deposit activated successfully!',200,$deposit);
+                    return sendSuccessResponse('Deposit activated successfully!',200,$depositData);
                 }
                 else{
-                    return sendSuccessResponse('Deposit inactived successfully!',200,$deposit);
+                    return sendSuccessResponse('Deposit inactived successfully!',200,$depositData);
                 }
             }
             else

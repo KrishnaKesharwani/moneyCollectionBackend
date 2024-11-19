@@ -20,6 +20,9 @@ class CustomerDeposit extends Model
         'details',
         'created_by',
         'status',
+        'status_changed_reason',
+        'status_changed_by',
+        'status_changed_at',
     ];
 
     protected $hidden = [
