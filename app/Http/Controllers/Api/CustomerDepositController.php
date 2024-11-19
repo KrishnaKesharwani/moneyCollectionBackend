@@ -374,6 +374,53 @@ class CustomerDepositController extends Controller
         }
     }
 
+    /**
+     * Update loan status by given loan id
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function updateDepositStatus(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            'deposit_id' => 'required|integer|exists:customer_deposits,id',
+            'status' => 'required',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            $depositId = $request->deposit_id;
+            $updateDepositData = [
+                'status' => $request->status,
+            ];
+            
+            $deposit = $this->customerDepositRepository->update($depositId,$updateDepositData);
+
+            if($deposit)
+            {
+                if($request->status == 'active')
+                {
+                    return sendSuccessResponse('Deposit activated successfully!',200,$deposit);
+                }
+                else{
+                    return sendSuccessResponse('Deposit inactived successfully!',200,$deposit);
+                }
+            }
+            else
+            {
+                return sendErrorResponse('Deposit not updated!',422);
+            }
+        }
+        catch (Exception $e)
+        {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
+
     public function downloadDepositList(Request $request)
     {
         $validator = Validator::make($request->all(), [
