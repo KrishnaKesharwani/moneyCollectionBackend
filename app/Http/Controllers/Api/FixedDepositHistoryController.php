@@ -70,7 +70,9 @@ class FixedDepositHistoryController extends Controller
                 {
                     return sendErrorResponse('Money Back amount is greater than deposit amount', 422);
                 }
-                
+            }else{
+                DB::commit();
+                return sendSuccessResponse('Amount debit successfully!', 201, $depositHistory);
             }
         }
         else

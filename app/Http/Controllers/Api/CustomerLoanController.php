@@ -942,6 +942,7 @@ class CustomerLoanController extends Controller
         $validator = Validator::make($request->all(), [
             'company_id' => 'required|exists:companies,id',
             'status' => 'required',
+            'loan_status' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -955,8 +956,16 @@ class CustomerLoanController extends Controller
             $status = $request->status;
         }
 
+        $loanStatus = null;
+
+        if ($request->loan_status == 'all') {
+            $loanStatus = null;
+        } else {
+            $loanStatus = $request->loan_status;
+        }
+
         $companyId  = $request->company_id ?? 1;
-        $loanStatus = $request->loan_status ?? null;
+        
 
         // Create new Spreadsheet object
         $spreadsheet = new Spreadsheet();

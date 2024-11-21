@@ -48,7 +48,7 @@ class FixedDepositController extends Controller
         }
 
         try{
-            $status = $request->status ?? 'active';
+            $status = $request->status ?? null;
             $customer = $request->customer_id ?? null;
             $deposits = $this->fixedDepositRepository->getAllFixedDeposits($request->company_id,$status,$customer);
             if($deposits->isEmpty())
@@ -58,15 +58,19 @@ class FixedDepositController extends Controller
             else
             {
                 $totalCustomer = [];
-                $totalPaidAmount = 0;
+                $totalWithdrawAmount    = 0;
+                $totalDepositAmount     = 0;
+                $totalEndAmount         = 0;
                 
                 foreach($deposits as $deposit)
                 {
-                    $paidAmount             = $this->fixedDepositHistoryRepository->getTotalDepositAmount($deposit->id,'debit');
-                    $deposit->total_paid    = $paidAmount;
+                    $paidAmount                 = $this->fixedDepositHistoryRepository->getTotalDepositAmount($deposit->id,'debit');
+                    $deposit->total_withdraw    = $paidAmount;
                     if($deposit->status == 'active'){
-                        $totalPaidAmount    = $totalPaidAmount + $paidAmount;
-                        $totalCustomer[]    = $deposit->customer_id;
+                        $totalWithdrawAmount    = $totalWithdrawAmount + $paidAmount;
+                        $totalCustomer[]        = $deposit->customer_id;
+                        $totalDepositAmount     = $totalDepositAmount + $deposit->deposit_amount;
+                        $totalEndAmount         = $totalEndAmount + $deposit->refund_amount;
                     }
                 }
 
@@ -78,7 +82,9 @@ class FixedDepositController extends Controller
                 $depositData = [
                     'deposits' => $deposits,
                     'total_cusotomer' => $totalCustomerCount,
-                    'total_paid_amount' => $totalPaidAmount,
+                    'total_deposit_amount' => $totalDepositAmount,
+                    'total_withdraw_amount' => $totalWithdrawAmount,
+                    'total_end_amount' => $totalEndAmount
                 ];
 
                 return sendSuccessResponse('Deposits found successfully!', 200, $depositData);
@@ -91,8 +97,6 @@ class FixedDepositController extends Controller
 
     public function store(Request $request)
     {
-        // Validate the request
-
         $validator = Validator::make($request->all(), [
             'company_id' => 'required|integer|exists:companies,id',
             'customer_id '  => 'required1|integer|exists:customers,id',
@@ -111,6 +115,7 @@ class FixedDepositController extends Controller
         $validatedData = $request->all();
         
         try {
+
             DB::beginTransaction();
             $cleanStartDate                             = preg_replace('/\s*\(.*\)$/', '', $request->start_date);
             $cleanEndDate                               = preg_replace('/\s*\(.*\)$/', '', $request->end_date);
@@ -118,7 +123,6 @@ class FixedDepositController extends Controller
             $validatedData['end_date']                  = Carbon::parse($cleanEndDate)->format('Y-m-d');
             $validatedData['apply_date']                = Carbon::now()->format('Y-m-d');
             $validatedData['status']                    = $request->status ?? 'active';
-            
             
             // Store the company data in the database
             $customerDeposit = $this->fixedDepositRepository->create($validatedData);

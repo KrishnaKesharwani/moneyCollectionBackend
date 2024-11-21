@@ -42,7 +42,7 @@ class CompanyController extends Controller
         
         if($upcomingExpire==0)
         {
-            $companies = Company::with(['plans','plans.companyPlanHistory'])->orderBy('id', 'desc')->get();
+            $companies = Company::with(['plans','plans.companyPlanHistory','user'])->orderBy('id', 'desc')->get();
         }
         else
         {
@@ -93,7 +93,7 @@ class CompanyController extends Controller
                                 ->whereDate('end_date', '<=', $nowForSixMonth->addMonth());
                           });
                       });
-            }, 'plans.companyPlanHistory'])
+            }, 'plans.companyPlanHistory','user'])
             ->orderBy('id', 'desc')
             ->get();
         }
