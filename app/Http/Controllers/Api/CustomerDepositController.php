@@ -14,6 +14,7 @@ use App\Repositories\DepositMemberHistoryRepository;
 use App\Repositories\DepositHistoryRepository;
 use App\Repositories\MemberRepository;
 use App\Repositories\ReportBackupRepository;
+use App\Repositories\DepositRequestRepository;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use exception;
@@ -32,6 +33,7 @@ class CustomerDepositController extends Controller
     protected $depositHistoryRepository;
     protected $memberRepository;
     protected $reportBackupRepository;
+    protected $depositRequestRepository;
 
     public function __construct(
         CustomerRepository $customerRepository,
@@ -39,8 +41,8 @@ class CustomerDepositController extends Controller
         DepositMemberHistoryRepository $depositeMemberHistoryRepository,
         DepositHistoryRepository $depositHistoryRepository,
         MemberRepository $memberRepository,
-        ReportBackupRepository $reportBackupRepository
-
+        ReportBackupRepository $reportBackupRepository,
+        DepositRequestRepository $depositRequestRepository
         )
     {
         $this->customerRepository                      = $customerRepository;
@@ -49,6 +51,7 @@ class CustomerDepositController extends Controller
         $this->depositHistoryRepository                = $depositHistoryRepository;
         $this->memberRepository                        = $memberRepository;
         $this->reportBackupRepository                  = $reportBackupRepository;
+        $this->depositRequestRepository                = $depositRequestRepository;
     }
 
     public function index(Request $request){
@@ -510,5 +513,43 @@ class CustomerDepositController extends Controller
 
         // Return success response with download URL
         return sendSuccessResponse('Deposit data is ready for download.',200, ['download_url' => $fullUrl]);
+    }
+
+
+    public function storeRequest(Request $request)
+    {
+        // Validate the request
+        $validator = Validator::make($request->all(), [
+            'deposit_id' => 'required|integer|exists:customer_deposits,id',
+            'request_amount' => 'required|numeric',
+            'reason' => 'required|string',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        $validatedData = $request->all();
+        
+        try {
+            DB::beginTransaction();
+
+            $validatedData['requested_by']        = auth()->user()->id;
+            $validatedData['request_date']        = Carbon::now()->format('Y-m-d H:i:s');
+            // Store the deposit request data in the database
+            $depositRequest = $this->depositRequestRepository->create($validatedData);
+            if ($depositRequest)
+            {   
+                return sendSuccessResponse('Deposit Request added successfully!', 201, $depositRequest);
+            }
+            else
+            {
+                return sendErrorResponse('Deposit Request not added!', 404);
+            }
+        }
+        catch (Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
     }
 }

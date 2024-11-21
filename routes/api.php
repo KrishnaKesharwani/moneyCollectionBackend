@@ -90,6 +90,9 @@ Route::middleware('api')->group(function () {
         Route::post('company-deposit-status-graph', [CustomerDepositController::class, 'calculateDepositofLast6Months']);
         Route::put('update-deposit-status', [CustomerDepositController::class, 'updateDepositStatus']);
 
+        //deposit request
+        Route::post('create-deposit-request', [CustomerDepositController::class, 'storeRequest']);
+
         //offers
         Route::post('create-offer', [OfferController::class, 'store']);
         Route::post('update-offer', [OfferController::class, 'update']);
