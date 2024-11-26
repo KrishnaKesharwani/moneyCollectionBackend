@@ -92,6 +92,9 @@ Route::middleware('api')->group(function () {
 
         //deposit request
         Route::post('create-deposit-request', [CustomerDepositController::class, 'storeRequest']);
+        Route::put('update-deposit-request-status', [CustomerDepositController::class, 'updateDepositRequestStatus']);
+        Route::post('deposit-request-list', [CustomerDepositController::class, 'depositRequestList']);
+        Route::post('customer-request-list', [CustomerDepositController::class, 'depositLoanRequestList']);
 
         //offers
         Route::post('create-offer', [OfferController::class, 'store']);

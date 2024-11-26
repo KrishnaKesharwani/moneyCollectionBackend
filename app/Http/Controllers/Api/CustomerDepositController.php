@@ -15,6 +15,7 @@ use App\Repositories\DepositHistoryRepository;
 use App\Repositories\MemberRepository;
 use App\Repositories\ReportBackupRepository;
 use App\Repositories\DepositRequestRepository;
+use App\Repositories\UserRepository;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use exception;
@@ -34,6 +35,7 @@ class CustomerDepositController extends Controller
     protected $memberRepository;
     protected $reportBackupRepository;
     protected $depositRequestRepository;
+    protected $userRepository;
 
     public function __construct(
         CustomerRepository $customerRepository,
@@ -42,7 +44,8 @@ class CustomerDepositController extends Controller
         DepositHistoryRepository $depositHistoryRepository,
         MemberRepository $memberRepository,
         ReportBackupRepository $reportBackupRepository,
-        DepositRequestRepository $depositRequestRepository
+        DepositRequestRepository $depositRequestRepository,
+        UserRepository $userRepository
         )
     {
         $this->customerRepository                      = $customerRepository;
@@ -52,6 +55,7 @@ class CustomerDepositController extends Controller
         $this->memberRepository                        = $memberRepository;
         $this->reportBackupRepository                  = $reportBackupRepository;
         $this->depositRequestRepository                = $depositRequestRepository;
+        $this->userRepository                          = $userRepository;
     }
 
     public function index(Request $request){
@@ -231,8 +235,9 @@ class CustomerDepositController extends Controller
             else
             {
                 $balance = 0;
+                $totalbalance = 0;
                 foreach ($collection as $key => $value) {
-                    $collection[$key]->balance = $balance;
+                    
                     if ($value->action_type == 'credit') {
                         $balance += $value->amount;
                     }
@@ -240,12 +245,15 @@ class CustomerDepositController extends Controller
                     elseif ($value->action_type == 'debit') {
                         $balance -= $value->amount;
                     }
+                    $collection[$key]->balance = $balance;
+                    $totalbalance = $balance;
                 }
 
                 $sortedCollection = $collection->sortByDesc('created_at')->values();
                 $responseData = 
                 [
                     'collection' => $sortedCollection,
+                    'total_balance' => $totalbalance
                 ];
                 return sendSuccessResponse('Collection found successfully!', 200, $responseData);
             }
@@ -533,8 +541,6 @@ class CustomerDepositController extends Controller
         $validatedData = $request->all();
         
         try {
-            DB::beginTransaction();
-
             $validatedData['requested_by']        = auth()->user()->id;
             $validatedData['request_date']        = Carbon::now()->format('Y-m-d H:i:s');
             // Store the deposit request data in the database
@@ -549,6 +555,200 @@ class CustomerDepositController extends Controller
             }
         }
         catch (Exception $e) {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
+
+
+    public function updateDepositRequestStatus(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            'request_id' => 'required|integer|exists:deposit_requests,id',
+            'status' => 'required',
+        ]);
+        
+
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            $requestId = $request->request_id;
+            $requestData = [
+                'status' => $request->status,
+                'approved_at' => Carbon::now()->format('Y-m-d H:i:s'),
+                'replied_message' => $request->replied_message ?? null
+            ];
+            
+            $depositRequest = $this->depositRequestRepository->update($requestId,$requestData);
+
+            if($depositRequest)
+            {
+                $depositRequestData = $this->depositRequestRepository->find($requestId);
+                return sendSuccessResponse('Deposit request updated successfully!',200,$depositRequestData);
+            }
+            else
+            {
+                return sendErrorResponse('Deposit request not updated!',422);
+            }
+        }
+        catch (Exception $e)
+        {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
+
+    public function depositRequestList(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required|integer|exists:companies,id',
+        ]);
+
+    
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+        try{
+            $companyId  = $request->company_id;
+            $customerId = $request->customer_id ?? null;
+            $requestDate = $request->request_date ?? null;
+
+            if(isset($request->request_date) && ($request->request_date != ''  && $request->request_date != null))
+            {
+                $cleanRequestDate           = preg_replace('/\s*\(.*\)$/', '', $request->request_date);
+                $requestDate                = Carbon::parse($cleanRequestDate)->format('Y-m-d');
+            }
+
+            $status = ['pending'];
+            if($requestDate!=null || $customerId!=null){
+                $status[] = 'approved';
+            }
+
+            $depositRequestList = $this->depositRequestRepository->depositRequestList($companyId,$customerId,$status,$requestDate);
+            if($depositRequestList)
+            {
+                foreach ($depositRequestList as $key => $value) {
+                       $user = $this->userRepository->find($value->requested_by);
+                       if($user){
+                        if($user->user_type == 3){
+                            $depositRequestList[$key]->requested_by = 'self';
+                        }elseif($user->user_type == 2){
+                            $member = $this->memberRepository->getMemberByUserId($user->id);
+                            if($member){
+                                $depositRequestList[$key]->requested_by = $member->name;
+                            }else{
+                                $depositRequestList[$key]->requested_by = '';
+                            }
+                        }
+                    }
+                }
+                return sendSuccessResponse('Deposit request list',200,$depositRequestList);
+            }
+            else
+            {
+                return sendErrorResponse('Deposit request not found!',422);
+            }
+        }
+        catch (Exception $e)
+        {
+            return sendErrorResponse($e->getMessage(), 500);
+        }
+    }
+
+    public function depositLoanRequestList(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required|integer|exists:companies,id',
+            'customer_id' => 'required|exists:customers,id',
+        ]);
+
+    
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+
+
+        try{
+            $companyId  = $request->company_id;
+            $customerId = $request->customer_id ?? null;
+
+            // $companyId  = 1;
+            // $customerId = 1;
+            $status  = null;
+        
+            $depositRequestList = $this->depositRequestRepository->depositRequestList($companyId,$customerId,$status);
+            $requestList = [];
+
+            if(count($depositRequestList)>0)
+            {
+                foreach ($depositRequestList as $key => $value) {
+                       $container['id']= $value->id;
+                       $container['request_no']         = $value->deposit_no;
+                       $container['customer_name']      = $value->customer_name;
+                       $container['amount']             = $value->request_amount;
+                       $container['status']             = $value->status;
+                       $container['reason']             = $value->reason;
+                       $container['request_date']       = Carbon::parse($value->request_date)->format('Y-m-d');
+                       //$container['request_id']    = $value->deposit_id;
+                       $container['request_type']       = 'deposit';
+                       $container['replied_message']    = $value->replied_message;
+                       $user = $this->userRepository->find($value->requested_by);
+                       if($user){
+                        if($user->user_type == 3){
+                            $container['requested_by'] = 'self';
+                        }elseif($user->user_type == 2){
+                            $member = $this->memberRepository->getMemberByUserId($user->id);
+                            if($member){
+                                $container['requested_by'] = $member->name;
+                            }else{
+                                $container['requested_by'] = '';
+                            }
+                        }
+                        }
+                        $requestList[] = $container;
+                }
+            }
+
+
+            $loanRequestList = $this->depositRequestRepository->loanRequestList($companyId,$customerId,$status);
+
+            if(count($loanRequestList)>0){
+                foreach ($loanRequestList as $key => $value) {
+                    $container['id']                = $value->id;
+                    $container['request_no']        = $value->request_no;
+                    $container['customer_name']     = $value->customer_name;
+                    $container['amount']            = $value->amount;
+                    $container['status']            = $value->status;
+                    $container['reason']            = $value->reason;
+                    $container['request_date']      = $value->request_date;
+                    $container['replied_message']   = $value->replied_message;
+                    //$container['request_id']    = $value->request_id;
+                    $container['request_type']      = 'loan';
+                    
+                    if($value->applied_user_type == 3){
+                        $container['requested_by'] = 'self';
+                    }elseif($value->applied_user_type == 2){
+                        $member = $this->memberRepository->getMemberByUserId($value->applied_by);
+                        if($member){
+                            $container['requested_by'] = $member->name;
+                        }else{
+                            $container['requested_by'] = '';
+                        }
+                    }
+                    
+                    $requestList[] = $container;
+                }
+            }
+
+            if(count($requestList)>0){
+                return sendSuccessResponse('Request data found successfully',200,$requestList);
+            }else{
+                return sendErrorResponse('Request data not found',422);
+            }
+        }
+        catch (Exception $e)
+        {
             return sendErrorResponse($e->getMessage(), 500);
         }
     }

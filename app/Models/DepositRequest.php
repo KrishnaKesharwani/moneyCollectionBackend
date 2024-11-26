@@ -20,7 +20,8 @@ class DepositRequest extends Model
         'requested_by',
         'status',
         'request_date',
-        'approved_at'
+        'approved_at',
+        'replied_message'
     ];
 
     protected $hidden = [
