@@ -9,7 +9,9 @@ use App\Repositories\LoanHistoryRepository;
 use App\Repositories\MemberRepository;
 use App\Repositories\CustomerLoanRepository;
 use App\Repositories\MemberFinanceHistoryRepository;
-use App\Repositories\MemberFinanceRepository;    
+use App\Repositories\MemberFinanceRepository;
+use App\Repositories\DepositHistoryRepository;
+use App\Repositories\CustomerDepositRepository;    
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use exception;
@@ -22,13 +24,17 @@ class LoanHistoryController extends Controller
     protected $customerLoanRepository;
     protected $memberFinanceHistoryRepository;
     protected $memberFinanceRepository;
+    protected $depositHistoryRepository;
+    protected $customerDepositRepository;
 
     public function __construct(
         LoanHistoryRepository $loanHistoryRepository,
         MemberRepository $memberRepository,
         CustomerLoanRepository $customerLoanRepository,
         MemberFinanceHistoryRepository $memberFinanceHistoryRepository,
-        MemberFinanceRepository $memberFinanceRepository
+        MemberFinanceRepository $memberFinanceRepository,
+        DepositHistoryRepository $depositHistoryRepository,
+        CustomerDepositRepository $customerDepositRepository,
         )
     {
         $this->loanHistoryRepository = $loanHistoryRepository;
@@ -36,6 +42,8 @@ class LoanHistoryController extends Controller
         $this->customerLoanRepository = $customerLoanRepository;
         $this->memberFinanceHistoryRepository = $memberFinanceHistoryRepository;
         $this->memberFinanceRepository = $memberFinanceRepository;
+        $this->depositHistoryRepository = $depositHistoryRepository;
+        $this->customerDepositRepository = $customerDepositRepository;
     }
 
 
@@ -167,37 +175,83 @@ class LoanHistoryController extends Controller
         }
 
         try{
-            $collection = $this->loanHistoryRepository->getTodayCollection($request->member_id);
-            if($collection->isEmpty())
+            $memberId = $request->member_id;
+            $collection = $this->loanHistoryRepository->getTodayCollection($memberId);
+
+            $collectedData = [];
+            $attendedCustomer = [];
+            $totalCollection = 0;
+
+
+            if(!$collection->isEmpty()){
+                foreach($collection as $loan){
+                    $container['customer_name'] = $loan?->loan?->customer?->name;
+                    $container['customer_mobile'] = $loan?->loan?->customer?->mobile;
+                    $container['amount'] = $loan->amount;
+                    $container['receive_date'] = Carbon::parse($loan->receive_date)->format('Y-m-d');
+                    $container['collection_type'] = 'loan';
+                    $container['received_type'] = 'credit';
+                    $attendedCustomer[] = $loan?->loan?->customer?->id;
+                    $totalCollection += $loan->amount;
+                    $collectedData[] = $container;
+                }
+            }
+
+            $depositCollection = $this->depositHistoryRepository->getTodayCollection($memberId);
+
+            if(!$depositCollection->isEmpty()){
+                foreach($depositCollection as $deposit){
+                    $container['customer_name'] = $deposit->customer_name;
+                    $container['customer_mobile'] = $deposit->mobile;
+                    $container['amount'] = $deposit->amount;
+                    $container['receive_date'] = Carbon::parse($deposit->action_date)->format('Y-m-d');
+                    $container['collection_type'] = 'deposit';
+                    $container['received_type'] = $deposit->action_type;
+                    $attendedCustomer[] = $deposit->customer_id;
+                    if($deposit->action_type=='credit'){
+                        $totalCollection += $deposit->amount;
+                    }else{
+                        $totalCollection -= $deposit->amount;
+                    }
+                    
+                    $collectedData[] = $container;
+                }
+            }
+
+            //get total loan cutomer id
+            $totalLoanCustomerId = $this->customerLoanRepository->getTotalCustomersId($memberId,'paid')->toArray();
+
+            //get total deposit customer id 
+            $totalDepositCustomerId = $this->customerDepositRepository->getTotalDepositCustomersId($memberId,'active')->toArray();
+
+            $totalCustomerId = 0;
+            if(count($totalLoanCustomerId)>0 && count($totalDepositCustomerId)>0)
+            {
+                $totalCustomerId = count(array_unique(array_merge($totalLoanCustomerId,$totalDepositCustomerId)));
+            }
+            elseif(count($totalLoanCustomerId)>0)
+            {
+                $totalCustomerId = count($totalLoanCustomerId);
+            }
+            elseif(count($totalDepositCustomerId)>0)
+            {
+                $totalCustomerId = count($totalDepositCustomerId);
+            }
+
+            if(count($collectedData)==0)
             {
                 return sendErrorResponse('Collection not found!', 404);
             }
             else
             {
-                $totalCollection = 0;
-                $totalAttendedCustomer = 0;
-                $totalCustomer = 0;
-                $loanIds = [];
-                foreach ($collection as $item) {
-                    $totalCollection += $item->amount;
-                    $loanIds[] = $item->loan_id;                  
-                }
-
-                if(count($loanIds) > 1){
-                    $loanIds = array_unique($loanIds);
-                    $totalAttendedCustomer = $this->customerLoanRepository->getTotalAttendedCustomer($loanIds);
-                }
-
-                $totalCustomer = $this->customerLoanRepository->getTotalCustomers($request->member_id,'paid');
-                $responseData = 
+            $responseData = 
                 [
-                    'collection' => $collection,
-                    'attended_customer' => $totalAttendedCustomer,
-                    'total_customer' => $totalCustomer,
+                    'collection' => $collectedData,
+                    'attended_customer' => count($attendedCustomer)>0?count(array_unique($attendedCustomer)):0,
+                    'collect_money' => $totalCollection,
+                    'total_customer' => $totalCustomerId,
                 ];
-
-
-                return sendSuccessResponse('Collection found successfully!', 200, $responseData);
+            return $responseData;
             }
         }
         catch (\Exception $e) {

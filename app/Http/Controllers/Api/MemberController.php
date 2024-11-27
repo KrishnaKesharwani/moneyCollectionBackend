@@ -14,6 +14,11 @@ use App\Repositories\MemberRepository;
 use App\Repositories\CompanyRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\ReportBackupRepository;
+use App\Repositories\DepositHistoryRepository;
+use App\Repositories\CustomerLoanRepository;
+use App\Repositories\CustomerDepositRepository;
+use App\Repositories\LoanHistoryRepository;
+use App\Repositories\MemberFinanceRepository;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use exception;
@@ -29,18 +34,33 @@ class MemberController extends Controller
     protected $companyRepository;
     protected $userRepository;
     protected $reportBackupRepository;
+    protected $depositHistoryRepository;
+    protected $loanHistoryRepository;
+    protected $customerLoanRepository;
+    protected $customerDepositRepository;
+    protected $memberFinanceRepository;
 
     public function __construct(
         CompanyRepository $companyRepository,
         MemberRepository $memberRepository,
         UserRepository $userRepository,
-        ReportBackupRepository $reportBackupRepository
+        ReportBackupRepository $reportBackupRepository,
+        DepositHistoryRepository $depositHistoryRepository,
+        LoanHistoryRepository $loanHistoryRepository,
+        CustomerLoanRepository $customerLoanRepository,
+        CustomerDepositRepository $customerDepositRepository,
+        MemberFinanceRepository $memberFinanceRepository
         )
     {
-        $this->companyRepository        = $companyRepository;
-        $this->memberRepository         = $memberRepository;
-        $this->userRepository           = $userRepository;
-        $this->reportBackupRepository   = $reportBackupRepository;
+        $this->companyRepository            = $companyRepository;
+        $this->memberRepository             = $memberRepository;
+        $this->userRepository               = $userRepository;
+        $this->reportBackupRepository       = $reportBackupRepository;
+        $this->depositHistoryRepository     = $depositHistoryRepository;
+        $this->loanHistoryRepository        = $loanHistoryRepository;
+        $this->customerLoanRepository       = $customerLoanRepository;
+        $this->customerDepositRepository    = $customerDepositRepository;
+        $this->memberFinanceRepository      = $memberFinanceRepository;
     }
 
     public function index(Request $request){
@@ -415,5 +435,71 @@ class MemberController extends Controller
         // Return success response with download URL
         return sendSuccessResponse('Members data is ready for download.',200, ['download_url' => $fullUrl]);
 
+    }
+
+    public function memberDashboard(){
+        $userId = auth()->user()->id;
+        //$userId = 5;
+        $member = $this->memberRepository->getMemberByUserId($userId);
+        if(empty($member))
+        {
+            return sendErrorResponse('Member not found!', 404);
+        }
+        else{
+            $memberId               = $member->id;
+            $companyId              = $member->company_id;
+            $today                  = Carbon::now()->format('Y-m-d');
+            //first date of current month
+            $firstDate              = Carbon::now()->startOfMonth()->format('Y-m-d');
+            //last date of current month
+            $lastDate               = Carbon::now()->endOfMonth()->format('Y-m-d');
+
+            //get today total collection
+            $todayLoanAmount        = $this->loanHistoryRepository->getLoanReceivedAmountByDate($companyId,$memberId,$today);
+            $todayDepositAmount     = $this->depositHistoryRepository->getDepositReceivedAmountByDate($companyId,$memberId,$today);
+            $todayCollection        = $todayLoanAmount+$todayDepositAmount;
+
+            //get monthly total collection
+            $monthlyLoanAmount      = $this->loanHistoryRepository->getLoanReceivedAmountByDatewise($companyId,$memberId,$firstDate,$lastDate);
+            $monthlyDepositAmount   = $this->depositHistoryRepository->getDepositReceivedAmountByDatewise($companyId,$memberId,$firstDate,$lastDate);
+            $monthlyCollection      = $monthlyLoanAmount+$monthlyDepositAmount;
+
+            //get total assigne customer count
+
+            $totalLoanCustomersId       = $this->customerLoanRepository->getAssignedCustomersId($companyId,'paid',$memberId)->toArray();
+            $totalDepositCustomersId    = $this->customerDepositRepository->getTotalDepositCustomersId($memberId,'active')->toArray();
+            if(count($totalLoanCustomersId)>0 && count($totalDepositCustomersId)>0)
+            {
+                $totalCustomers = count(array_unique(array_merge($totalLoanCustomersId,$totalDepositCustomersId)));
+            }
+            elseif(count($totalLoanCustomersId)>0)
+            {
+                $totalCustomers = count($totalLoanCustomersId);
+            }
+            elseif(count($totalDepositCustomersId)>0)
+            {
+                $totalCustomers = count($totalDepositCustomersId);
+            }
+            else
+            {
+                $totalCustomers = 0;
+            }
+
+            //today advance money of member
+            $advanceMoney = $this->memberFinanceRepository->getAdvanceMoney($memberId, $companyId,$today);
+            $responseData = 
+            [
+                'today_collection' => $todayCollection,
+                'monthly_collection' => $monthlyCollection,
+                'assigned_customers' => $totalCustomers,
+                'advance_money' => $advanceMoney,
+                'member_balance' => (float)$member->balance
+            ];
+            
+            return sendSuccessResponse('Member dashboard data.',200, $responseData);
+        }
+        echo '<pre>';
+        print_r($member);
+        echo '</pre>';
     }
 }

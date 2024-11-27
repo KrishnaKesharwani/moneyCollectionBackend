@@ -1188,4 +1188,43 @@ class CustomerLoanController extends Controller
         // Return success response with download URL
         return sendSuccessResponse('loan details is ready for download.',200, ['download_url' => $fullUrl]);
     }
+
+    public function customerDashboard(){
+        $userId = auth()->user()->id;
+        $customer = $this->customerRepository->getCustomerbyUserId($userId);
+        if(empty($customer)){
+            return sendErrorResponse('Customer not found!', 404);
+        }else{
+            $customerId = $customer->id;
+            $companyId  = $customer->company_id;
+
+            //get customer loan data
+            $totalLoanAmount = $this->customerLoanRepository->getTotalLoanAmount($companyId,null,$customerId);
+            $loanIds         = $this->customerLoanRepository->getRunningLoanIds($companyId,null,$customerId)->toArray();
+            $totalPaidAmount = 0;
+            $totalRemainingAmount = 0;
+            if(count($loanIds)>0){
+                $totalPaidAmount = $this->customerLoanRepository->getPaidAmountByLoanIds($customerId,$loanIds);
+                $totalRemainingAmount = $totalLoanAmount-$totalPaidAmount;
+            }
+            $runningLoans = count($loanIds);
+
+            //get cutomer Deposit data
+            $depositamount = $this->depositHistoryRepository->getdepositAmountByCustomerId($customerId,'credit');
+            $withdrawamount = $this->depositHistoryRepository->getdepositAmountByCustomerId($customerId,'debit');
+            $totalDepositamount = $depositamount - $withdrawamount;
+            
+            $responseData = [
+                'loan_amount'           => (float)$totalLoanAmount,
+                'paid_amount'           => (float)$totalPaidAmount,
+                'remaining_amount'      => $totalRemainingAmount,
+                'running_loans'         => $runningLoans,
+                'daily_amount_balance'  => $totalDepositamount,
+            ];
+
+            return sendSuccessResponse('Customer Dashboard Data.',200, $responseData);
+
+        }
+
+    }
 }

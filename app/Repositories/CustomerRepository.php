@@ -18,6 +18,10 @@ class CustomerRepository extends BaseRepository
         return $this->model->with('user')->where('id', $customer_id)->first();
     }
 
+    public function getCustomerbyUserId($userId){
+        return $this->model->where('user_id', $userId)->first();
+    }
+
     public function getAllCustomers($company_id, $status = null)
     {
         return $this->model->with('user')

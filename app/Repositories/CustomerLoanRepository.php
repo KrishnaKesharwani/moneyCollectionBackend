@@ -113,6 +113,15 @@ class CustomerLoanRepository extends BaseRepository
             ->count('customer_id');
     }
 
+    public function getTotalCustomersId($memberId, $loanStatus) {
+        return $this->model
+            ->where('assigned_member_id', $memberId)
+            ->where('loan_status', $loanStatus)
+            ->where('status', 'active')
+            ->distinct('customer_id')
+            ->pluck('customer_id');
+    }
+
     public function getLoanHistory($customerId,$loanId,$fromDate){
         $history = DB::table('customer_loans')
             ->select('loan_history.*')
@@ -132,22 +141,41 @@ class CustomerLoanRepository extends BaseRepository
 
         return $history;
     }
+
+    public function getPaidAmountByLoanIds($customerId,$loanIds){
+        $amount = DB::table('customer_loans')
+            ->select('loan_history.*')
+            ->join('loan_history', 'customer_loans.id', '=', 'loan_history.loan_id')
+            ->where('customer_loans.customer_id', $customerId)
+            ->whereIn('loan_history.loan_id', $loanIds)
+            ->sum('loan_history.amount');
+
+        return $amount;
+    }
+
+    
     
 
-    public function getTotalLoanAmount($company_id, $memberId = null) {
+    public function getTotalLoanAmount($company_id, $memberId = null, $customerId = null) {
         return $this->model->where('company_id', $company_id)
                     ->when($memberId, function ($query) use ($memberId) {
                         return $query->where('assigned_member_id', $memberId);
+                    })
+                    ->when($customerId, function ($query) use ($customerId) {
+                        return $query->where('customer_id', $customerId);
                     })
                     ->where('status', 'active')
                     ->where('loan_status', 'paid')
                     ->sum('loan_amount');
     }
 
-    public function getRunningLoanIds($company_id, $memberId = null) {
+    public function getRunningLoanIds($company_id, $memberId = null,$customerId = null) {
         return $this->model->where('company_id', $company_id)
                     ->when($memberId, function ($query) use ($memberId) {
                         return $query->where('assigned_member_id', $memberId);
+                    })
+                    ->when($customerId, function ($query) use ($customerId) {
+                        return $query->where('customer_id', $customerId);
                     })
                     ->where('status', 'active')
                     ->where('loan_status', 'paid')
@@ -172,6 +200,18 @@ class CustomerLoanRepository extends BaseRepository
             ->where('status', 'active')
             ->distinct('customer_id')
             ->count('customer_id');
+    }
+
+    public function getAssignedCustomersId($company_id, $loanStatus,$memberId = null) {   
+        return $this->model
+            ->where('company_id', $company_id)
+            ->when($memberId, function ($query) use ($memberId) {
+                return $query->where('assigned_member_id', $memberId);
+            })
+            ->where('loan_status', $loanStatus)
+            ->where('status', 'active')
+            ->distinct('customer_id')
+            ->pluck('customer_id');
     }
 
     public function getCustomerLoansCount($company_id, $status) {

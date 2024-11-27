@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\MemberFinance;
+use Illuminate\Support\Facades\DB;
 
 class MemberFinanceRepository extends BaseRepository
 {
@@ -46,4 +47,15 @@ class MemberFinanceRepository extends BaseRepository
             ->get();
     }
 
+    public function getAdvanceMoney($memberId, $companyId,$date)
+    {
+        return DB::table('member_finance')
+            ->join('member_finance_history', 'member_finance.id', '=', 'member_finance_history.member_finance_id')
+            ->where('member_finance.member_id', $memberId)
+            ->where('member_finance.company_id', $companyId)
+            ->where('member_finance.payment_status','!=','paid')
+            ->whereDate('member_finance_history.amount_date', $date)
+            ->where('member_finance_history.amount_by', 'advance')
+            ->sum('amount');
+    }
 }

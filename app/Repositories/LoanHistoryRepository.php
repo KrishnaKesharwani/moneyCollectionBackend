@@ -22,6 +22,7 @@ class LoanHistoryRepository extends BaseRepository
         return $this->model->whereIn('loan_id', $loanId)->sum('amount');
     }
 
+
     public function getMaxLoanHistoryDate($loanId){
         $maxDate = $this->model->where('loan_id', $loanId)->max('receive_date');
         if($maxDate)
@@ -41,6 +42,17 @@ class LoanHistoryRepository extends BaseRepository
                     ->where('customer_loans.company_id', $companyId)
                     ->where('loan_history.receiver_member_id', $memberId)
                     ->whereDate('loan_history.receive_date', $date)
+                    ->sum('loan_history.amount');
+        return $amount;
+    }
+
+    public function getLoanReceivedAmountByDatewise($companyId, $memberId, $fromDate, $toDate){
+        $amount = DB::table('loan_history')
+                    ->join('customer_loans', 'loan_history.loan_id', '=', 'customer_loans.id')
+                    ->where('customer_loans.company_id', $companyId)
+                    ->where('loan_history.receiver_member_id', $memberId)
+                    ->whereDate('loan_history.receive_date','>=',$fromDate)
+                    ->whereDate('loan_history.receive_date','<=',$toDate)
                     ->sum('loan_history.amount');
         return $amount;
     }

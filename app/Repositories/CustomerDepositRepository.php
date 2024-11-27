@@ -28,6 +28,7 @@ class CustomerDepositRepository extends BaseRepository
         return $this->model->whereIn('id', $depositIds)->distinct('customer_id')->count();
     }
 
+
     public function getAllCustomerDeposits($company_id, $status = null,$memberId = null,$customerId = null)
     {
         $deposits = $this->model->with('customer', 'member','depositHistory', 'depositHistory.recieved_member')
@@ -59,6 +60,14 @@ class CustomerDepositRepository extends BaseRepository
             ->where('status', $status)
             ->distinct('customer_id')
             ->count('customer_id');
+    }
+
+    public function getTotalDepositCustomersId($memberId, $status) {
+        return $this->model
+            ->where('assigned_member_id', $memberId)
+            ->where('status', $status)
+            ->distinct('customer_id')
+            ->pluck('customer_id');
     }
     
 
@@ -111,6 +120,7 @@ class CustomerDepositRepository extends BaseRepository
 
         return $history;
     }
+
 
     public function getDepositsCount($company_id,$status = null){
         return $this->model->where('company_id', $company_id)

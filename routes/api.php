@@ -50,6 +50,7 @@ Route::middleware('api')->group(function () {
         Route::post('updatemember', [MemberController::class, 'update']);
         Route::post('members', [MemberController::class, 'index']);
         Route::put('updatememberstatus', [MemberController::class, 'updateMemberStatus']);
+        Route::get('member-dashboard',[MemberController::class,'memberDashboard']);
 
         //memberFinance
         Route::post('pay-advance-to-member', [MemberFinanceController::class, 'store']);
@@ -63,6 +64,7 @@ Route::middleware('api')->group(function () {
         Route::post('customers', [CustomerController::class, 'index']);
         Route::put('updatecustomerstatus', [CustomerController::class, 'updateCustomerStatus']);
         Route::post('importcustomers', [CustomerController::class, 'importCustomers']);
+        Route::get('customer-dashboard',[CustomerLoanController::class,'customerDashboard']);
 
         //customerLoan
 

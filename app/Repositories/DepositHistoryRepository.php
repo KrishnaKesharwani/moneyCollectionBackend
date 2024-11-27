@@ -44,5 +44,41 @@ class DepositHistoryRepository extends BaseRepository
                     ->sum('deposit_history.amount');
         return $amount;
     }
+
+    public function getDepositReceivedAmountByDatewise($companyId, $memberId, $fromDate, $toDate){
+        $amount = DB::table('deposit_history')
+                    ->join('customer_deposits', 'deposit_history.deposit_id', '=', 'customer_deposits.id')
+                    ->where('customer_deposits.company_id', $companyId)
+                    ->where('deposit_history.receiver_member_id', $memberId)
+                    ->whereDate('deposit_history.action_date','>=', $fromDate)
+                    ->whereDate('deposit_history.action_date','<=', $toDate)
+                    ->where('deposit_history.action_type', 'credit')
+                    ->sum('deposit_history.amount');
+        return $amount;
+    }
+
+    public function getdepositAmountByCustomerId($customerId,$type){
+        $amount = DB::table('deposit_history')
+                ->where('action_type',$type)
+                ->whereIn('deposit_id', function ($query) use ($customerId) {
+                    $query->select('id')
+                          ->from('customer_deposits')
+                          ->where('status', 'active')
+                          ->where('customer_id', $customerId);
+                })                
+                ->sum('amount');
+        return $amount;
+    }
+
+    public function getTodayCollection($memberId){
+        $data = DB::table('deposit_history')
+                ->select('deposit_history.*', 'customers.name as customer_name', 'customers.mobile as mobile','customers.id as customer_id')
+                ->join('customer_deposits', 'deposit_history.deposit_id', '=', 'customer_deposits.id')
+                ->join('customers', 'customer_deposits.customer_id', '=', 'customers.id')
+                ->where('deposit_history.receiver_member_id', $memberId)
+                ->whereDate('action_date', carbon::today())
+                ->get();
+        return $data;
+    }
     // You can add any specific methods related to User here
 }

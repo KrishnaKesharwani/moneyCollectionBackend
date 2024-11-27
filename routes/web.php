@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\CustomerLoanController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,7 +18,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-
+Route::get('/customer-dashboard',[CustomerLoanController::class,'customerDashboard']);
 Route::get('/clear-cache', function () {
     // Run the optimize:clear command
     Artisan::call('optimize:clear');
