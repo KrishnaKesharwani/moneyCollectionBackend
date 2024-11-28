@@ -72,6 +72,10 @@ class DepositHistoryController extends Controller
             {
                 return sendErrorResponse('You are not the assigned member of this deposit for collection!', 404);
             }
+            if($deposit->status != 'active')
+            {
+                return sendErrorResponse('Deposit is not active!', 404);
+            }
         }
 
         

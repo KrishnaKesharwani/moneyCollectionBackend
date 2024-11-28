@@ -80,6 +80,10 @@ class LoanHistoryController extends Controller
             {
                 return sendErrorResponse('You are not the assigned member of this loan for collection!', 404);
             }
+
+            if($loan->loan_status != 'paid'){
+                return sendErrorResponse('This loan is not paid!', 404);
+            }
         }
 
         
