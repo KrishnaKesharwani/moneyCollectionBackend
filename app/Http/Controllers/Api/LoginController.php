@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Company;
 use App\Models\Member;
 use App\Models\Customer;
+use App\Repositories\CompanyPlanRepository;
 use App\Models\Offer;
 use Illuminate\Support\Facades\Validator;
 use App\Repositories\UserRepository;
@@ -19,12 +20,15 @@ class LoginController extends Controller
 {
 
     protected $userRepository;
+    protected $companyPlanRepository;
 
     public function __construct(
-        UserRepository $userRepository
+        UserRepository $userRepository,
+        companyPlanRepository $companyPlanRepository
         )
     {
         $this->userRepository           = $userRepository;
+        $this->companyPlanRepository    = $companyPlanRepository;
     }
 
 
@@ -67,11 +71,17 @@ class LoginController extends Controller
             $userData['member']     = null;
             $userData['customer']   = null;
             $userData['offer']      = null;
+            $userData['plan']       = null;
             if($userType==1){
                 $company = Company::where('user_id', $userId)->first();
                 if($company){
                     $userData['company'] = $company;
+                    $companyPlan = $this->companyPlanRepository->getCompanyPlan($company->id);
+                    if($companyPlan){
+                        $userData['plan'] = $companyPlan;
+                    }
                 }
+                
             }else if($userType==2){
                 $member = Member::where('user_id', $userId)->first();
                 if($member){

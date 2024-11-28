@@ -11,8 +11,8 @@ class CompanyPlanRepository extends BaseRepository
         parent::__construct($companyPlan);
     }
 
-    public function getCompanyPlan($planId){
-        return $this->model->where('id', $planId)->get();
+    public function getCompanyPlan($companyId){
+        return $this->model->where('company_id', $companyId)->latest()->first();
     }
 
     /**
