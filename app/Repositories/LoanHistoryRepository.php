@@ -46,6 +46,23 @@ class LoanHistoryRepository extends BaseRepository
         return $amount;
     }
 
+    public function getLoanReceivedAmountByloanIds($companyId,$loanIds,$date=null,$fromDate=null,$toDate=null){
+        $amount = DB::table('loan_history')
+                    ->join('customer_loans', 'loan_history.loan_id', '=', 'customer_loans.id')
+                    ->where('customer_loans.company_id', $companyId)
+                    ->whereIn('loan_history.loan_id', $loanIds);
+        if($date!=null){
+            $amount = $amount->whereDate('loan_history.receive_date', $date);
+        }
+
+        if($fromDate!=null && $toDate!=null){
+            $amount = $amount->whereDate('loan_history.receive_date','>=',$fromDate)
+                      ->whereDate('loan_history.receive_date','<=',$toDate);
+        }
+            $amount = $amount->sum('loan_history.amount');
+        return $amount;
+    }
+
     public function getLoanReceivedAmountByDatewise($companyId, $memberId, $fromDate, $toDate){
         $amount = DB::table('loan_history')
                     ->join('customer_loans', 'loan_history.loan_id', '=', 'customer_loans.id')

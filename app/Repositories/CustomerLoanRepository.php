@@ -221,5 +221,21 @@ class CustomerLoanRepository extends BaseRepository
                })
                ->count();
     }
+
+
+    public function getLoanCustomersIdbyCompany($companyId,$fromDate=null,$toDate=null){
+        return $this->model->where('company_id', $companyId)
+                        ->when($fromDate, function ($query, $fromDate) {
+                            return $query->whereDate('start_date','>=', $fromDate);
+                        })
+                        ->when($toDate, function ($query, $toDate) {
+                            return $query->whereDate('start_date','<=', $toDate);
+                        })
+                        ->distinct('customer_id')
+                        ->where('status', 'active')
+                        ->whereNotIn('loan_status',['cancelled','other','pending'])
+                        ->pluck('customer_id')
+                        ->toArray();
+    }
     // You can add any specific methods related to User here
 }

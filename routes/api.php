@@ -41,6 +41,7 @@ Route::middleware('api')->group(function () {
         Route::any('companies', [CompanyController::class, 'index']);
         Route::post('plandetails', [CompanyPlanController::class, 'planHistory']);
         Route::get('companydashboard',[CompanyController::class, 'companyDashboard']);
+        Route::get('/basecompany-dashboard',[CustomerLoanController::class,'companyDashboard']);
         Route::put('updatecompanystatus', [CompanyController::class, 'updateCompanyStatus']);
         Route::post('createplanhistory', [CompanyPlanHistoryController::class, 'store']);
         Route::post('createplan', [CompanyPlanController::class, 'store']);

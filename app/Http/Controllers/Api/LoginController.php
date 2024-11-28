@@ -14,7 +14,7 @@ use App\Repositories\CompanyPlanRepository;
 use App\Models\Offer;
 use Illuminate\Support\Facades\Validator;
 use App\Repositories\UserRepository;
-
+use Carbon\Carbon;
 
 class LoginController extends Controller
 {
@@ -71,14 +71,16 @@ class LoginController extends Controller
             $userData['member']     = null;
             $userData['customer']   = null;
             $userData['offer']      = null;
-            $userData['plan']       = null;
             if($userType==1){
                 $company = Company::where('user_id', $userId)->first();
                 if($company){
                     $userData['company'] = $company;
+                    $userData['company']['plan'] = null;
+                    $userData['company']['plan_end_date'] = null;
                     $companyPlan = $this->companyPlanRepository->getCompanyPlan($company->id);
                     if($companyPlan){
-                        $userData['plan'] = $companyPlan;
+                        $userData['company']['plan'] = $companyPlan->plan;
+                        $userData['company']['plan_end_date'] = Carbon::parse($companyPlan->end_date)->format('Y-m-d');
                     }
                 }
                 

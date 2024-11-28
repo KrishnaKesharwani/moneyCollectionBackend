@@ -189,6 +189,7 @@ class LoanHistoryController extends Controller
                     $container['customer_mobile'] = $loan?->loan?->customer?->mobile;
                     $container['amount'] = $loan->amount;
                     $container['receive_date'] = Carbon::parse($loan->receive_date)->format('Y-m-d');
+                    $container['receive_time'] = Carbon::parse($loan->receive_date)->format('H:i:s');
                     $container['collection_type'] = 'loan';
                     $container['received_type'] = 'credit';
                     $attendedCustomer[] = $loan?->loan?->customer?->id;
@@ -204,7 +205,8 @@ class LoanHistoryController extends Controller
                     $container['customer_name'] = $deposit->customer_name;
                     $container['customer_mobile'] = $deposit->mobile;
                     $container['amount'] = $deposit->amount;
-                    $container['receive_date'] = Carbon::parse($deposit->action_date)->format('Y-m-d');
+                    $container['receive_date'] = Carbon::parse($deposit->created_at)->format('Y-m-d');
+                    $container['receive_time'] = Carbon::parse($deposit->created_at)->format('H:i:s');
                     $container['collection_type'] = 'deposit';
                     $container['received_type'] = $deposit->action_type;
                     $attendedCustomer[] = $deposit->customer_id;

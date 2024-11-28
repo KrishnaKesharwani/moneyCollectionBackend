@@ -128,7 +128,29 @@ class CustomerDepositRepository extends BaseRepository
             return $query->where('status', $status);
         })
         ->count();
-        
+    }
+
+    /**
+     * Get distinct customer id of deposits by company id with optional date range
+     *
+     * @param int $companyId
+     * @param string|null $fromDate
+     * @param string|null $toDate
+     * @return array
+     */
+
+    public function getDepositCustomersIdbyCompany($companyId,$fromDate=null,$toDate=null){
+        return $this->model->where('company_id', $companyId)
+                        ->when($fromDate, function ($query, $fromDate) {
+                            return $query->whereDate('created_at','>=', $fromDate);
+                        })
+                        ->when($toDate, function ($query, $toDate) {
+                            return $query->whereDate('created_at','<=', $toDate);
+                        })
+                        ->distinct('customer_id')
+                        ->where('status', 'active')
+                        ->pluck('customer_id')
+                        ->toArray();
     }
     // You can add any specific methods related to User here
 }

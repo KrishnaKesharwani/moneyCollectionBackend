@@ -498,8 +498,5 @@ class MemberController extends Controller
             
             return sendSuccessResponse('Member dashboard data.',200, $responseData);
         }
-        echo '<pre>';
-        print_r($member);
-        echo '</pre>';
     }
 }

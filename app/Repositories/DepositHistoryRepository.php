@@ -34,22 +34,36 @@ class DepositHistoryRepository extends BaseRepository
             return null;
     }
     
-    public function getDepositReceivedAmountByDate($companyId, $memberId, $date){
+    public function getDepositReceivedAmountByDate($companyId, $memberId=null, $date=null,$status=null,$type='credit'){
         $amount = DB::table('deposit_history')
                     ->join('customer_deposits', 'deposit_history.deposit_id', '=', 'customer_deposits.id')
-                    ->where('customer_deposits.company_id', $companyId)
-                    ->where('deposit_history.receiver_member_id', $memberId)
-                    ->whereDate('deposit_history.action_date', $date)
-                    ->where('deposit_history.action_type', 'credit')
+                    ->where('customer_deposits.company_id', $companyId);
+        if($status!=null){
+            $amount = $amount->where('customer_deposits.status', $status);
+        }
+        if($memberId!=null){
+            $amount = $amount->where('deposit_history.receiver_member_id', $memberId);
+        }
+        if($date!=null){
+            $amount = $amount->whereDate('deposit_history.action_date', $date);
+        }
+        $amount = $amount->where('deposit_history.action_type', $type)
                     ->sum('deposit_history.amount');
         return $amount;
     }
 
-    public function getDepositReceivedAmountByDatewise($companyId, $memberId, $fromDate, $toDate){
+
+    public function getDepositReceivedAmountByDatewise($companyId, $memberId=null, $fromDate, $toDate,$status=null){
         $amount = DB::table('deposit_history')
                     ->join('customer_deposits', 'deposit_history.deposit_id', '=', 'customer_deposits.id')
-                    ->where('customer_deposits.company_id', $companyId)
-                    ->where('deposit_history.receiver_member_id', $memberId)
+                    ->where('customer_deposits.company_id', $companyId);
+        if($status!=null){
+            $amount = $amount->where('customer_deposits.status', $status);
+        }
+        if($memberId!=null){
+            $amount = $amount->where('deposit_history.receiver_member_id', $memberId);
+        }
+        $amount = $amount
                     ->whereDate('deposit_history.action_date','>=', $fromDate)
                     ->whereDate('deposit_history.action_date','<=', $toDate)
                     ->where('deposit_history.action_type', 'credit')
@@ -80,5 +94,7 @@ class DepositHistoryRepository extends BaseRepository
                 ->get();
         return $data;
     }
+
+
     // You can add any specific methods related to User here
 }

@@ -18,7 +18,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/customer-dashboard',[CustomerLoanController::class,'customerDashboard']);
+Route::get('/basecompany-dashboard',[CustomerLoanController::class,'companyDashboard']);
 Route::get('/clear-cache', function () {
     // Run the optimize:clear command
     Artisan::call('optimize:clear');

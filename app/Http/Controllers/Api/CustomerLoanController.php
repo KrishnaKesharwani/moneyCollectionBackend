@@ -17,6 +17,8 @@ use App\Repositories\LoanHistoryRepository;
 use App\Repositories\DepositHistoryRepository;
 use App\Repositories\MemberRepository;
 use App\Repositories\ReportBackupRepository;
+use App\Repositories\CompanyRepository;
+use App\Repositories\CustomerDepositRepository;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use exception;
@@ -37,6 +39,8 @@ class CustomerLoanController extends Controller
     protected $depositHistoryRepository;
     protected $memberRepository;
     protected $reportBackupRepository;
+    protected $companyRepository;
+    protected $customerDepositRepository;
 
     public function __construct(
         CustomerRepository $customerRepository,
@@ -47,7 +51,9 @@ class CustomerLoanController extends Controller
         LoanHistoryRepository $loanHistoryRepository,
         DepositHistoryRepository $depositHistoryRepository,
         MemberRepository $memberRepository,
-        ReportBackupRepository $reportBackupRepository
+        ReportBackupRepository $reportBackupRepository,
+        CompanyRepository $companyRepository,
+        CustomerDepositRepository $customerDepositRepository
         )
     {
         $this->customerRepository                   = $customerRepository;
@@ -59,6 +65,8 @@ class CustomerLoanController extends Controller
         $this->depositHistoryRepository             = $depositHistoryRepository;
         $this->memberRepository                     = $memberRepository;
         $this->reportBackupRepository               = $reportBackupRepository;
+        $this->companyRepository                    = $companyRepository;
+        $this->customerDepositRepository            = $customerDepositRepository;
     }
 
     public function index(Request $request){
@@ -1225,6 +1233,62 @@ class CustomerLoanController extends Controller
             return sendSuccessResponse('Customer Dashboard Data.',200, $responseData);
 
         }
+    }
 
+    public function companyDashboard(){
+        $userId     = auth()->user()->id;
+        $company    = $this->companyRepository->getCompanyIdByUserId($userId);
+        $companyId  = $company->id;
+        $loanIds    = $this->customerLoanRepository->getRunningLoanIds($companyId);
+        $today      = Carbon::now()->format('Y-m-d');
+        //first date of current month
+        $firstDate              = Carbon::now()->startOfMonth()->format('Y-m-d');
+        //last date of current month
+        $lastDate               = Carbon::now()->endOfMonth()->format('Y-m-d');
+
+        $todayLoanamount = $this->loanHistoryRepository->getLoanReceivedAmountByloanIds($companyId,$loanIds,$today);
+        $monthlyLoanamount = $this->loanHistoryRepository->getLoanReceivedAmountByloanIds($companyId,$loanIds,null,$firstDate,$lastDate);
+
+        $todayDepositamount = $this->depositHistoryRepository->getDepositReceivedAmountByDate($companyId,null,$today);
+        $monthlyDepositamount = $this->depositHistoryRepository->getDepositReceivedAmountByDatewise($companyId,null,$firstDate,$lastDate);
+
+        //this month start deposit customers
+        $recentDepositCustomer = $this->customerDepositRepository->getDepositCustomersIdbyCompany($companyId,$firstDate,$lastDate);
+        //total deposit customers
+        $totalDepositCustomer = $this->customerDepositRepository->getDepositCustomersIdbyCompany($companyId);
+        //this month start loan customers
+        $recentLoanCustomer = $this->customerLoanRepository->getLoanCustomersIdbyCompany($companyId,$firstDate,$lastDate);
+        //total loan customers
+        $totalLoanCustomer = $this->customerLoanRepository->getLoanCustomersIdbyCompany($companyId);
+
+        $recentCustomer = 0;
+        if(count($recentDepositCustomer)>0 && count($recentLoanCustomer)>0){
+            $recentCustomer = count(array_unique(array_merge($recentDepositCustomer,$recentLoanCustomer)));
+        }else if(count($recentDepositCustomer)>0){
+            $recentCustomer = count($recentDepositCustomer);
+        }else if(count($recentLoanCustomer)>0){
+            $recentCustomer = count($recentLoanCustomer);
+        }
+
+        $totalCustomer = 0;
+        if(count($totalDepositCustomer)>0 && count($totalLoanCustomer)>0){
+            $totalCustomer = count(array_unique(array_merge($totalDepositCustomer,$totalLoanCustomer)));
+        }else if(count($totalDepositCustomer)>0){
+            $totalCustomer = count($totalDepositCustomer);
+        }else if(count($totalLoanCustomer)>0){
+            $totalCustomer = count($totalLoanCustomer);
+        }
+
+        $responseData = [
+            'today_money'           => $todayLoanamount+$todayDepositamount,
+            'month_collection'      => $monthlyLoanamount+$monthlyDepositamount,
+            'total_customer'        => $totalCustomer,
+            'recent_customer'       => $recentCustomer,
+            'today_loan_amount'     => $todayLoanamount,
+            'today_deposit_amount'  => $todayDepositamount,
+        ];
+
+        return sendSuccessResponse('Company Dashboard Data.',200, $responseData);
+        
     }
 }
