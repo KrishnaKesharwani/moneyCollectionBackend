@@ -74,5 +74,19 @@ class LoanHistoryRepository extends BaseRepository
         return $amount;
     }
     
+
+    public function getAttendedCustomerIds($companyId, $memberId, $today){
+        $customerIds = DB::table('loan_history')
+                    ->join('customer_loans', function ($join) use ($companyId) {
+                        $join->on('customer_loans.id', '=', 'loan_history.loan_id')
+                            ->where('customer_loans.company_id', $companyId);
+                    })
+                    ->where('loan_history.receiver_member_id', $memberId)
+                    ->whereDate('loan_history.receive_date','=',$today)
+                    ->pluck('customer_loans.customer_id')->toArray();
+        return $customerIds;
+    }
+    
+    
     // You can add any specific methods related to User here
 }

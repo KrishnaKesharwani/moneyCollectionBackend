@@ -14,6 +14,9 @@ use App\Repositories\CustomerRepository;
 use App\Repositories\CompanyRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\ReportBackupRepository;
+use App\Repositories\CustomerLoanRepository;
+use App\Repositories\CustomerDepositRepository;
+use App\Repositories\FixedDepositRepository;
 use Carbon\Carbon;
 use exception;
 use Auth;
@@ -31,25 +34,33 @@ class CustomerController extends Controller
     protected $companyRepository;
     protected $userRepository;
     protected $reportBackupRepository;
+    protected $customerLoanRepository;
+    protected $customerDepositRepository;
+    protected $fixedDepositRepository;
 
     public function __construct(
         CompanyRepository $companyRepository,
         CustomerRepository $customerRepository,
         UserRepository $userRepository,
-        ReportBackupRepository $reportBackupRepository
+        ReportBackupRepository $reportBackupRepository,
+        CustomerLoanRepository $customerLoanRepository,
+        CustomerDepositRepository $customerDepositRepository,
+        FixedDepositRepository $fixedDepositRepository
         )
     {
         $this->companyRepository        = $companyRepository;
         $this->customerRepository       = $customerRepository;
         $this->userRepository           = $userRepository;
         $this->reportBackupRepository   = $reportBackupRepository;
+        $this->customerLoanRepository   = $customerLoanRepository;
+        $this->customerDepositRepository = $customerDepositRepository;
+        $this->fixedDepositRepository   = $fixedDepositRepository;
     }
 
     public function index(Request $request){
         $validator = Validator::make($request->all(), [
             'company_id' => 'required',
         ]);
-        
 
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
@@ -63,13 +74,28 @@ class CustomerController extends Controller
             {
                 return sendErrorResponse('Customers not found!', 404);
             }
-            else
-            {
-                return sendSuccessResponse('Customers found successfully!', 200, $customers);
+            // Collect customer IDs for bulk query
+            $customerIds = $customers->pluck('id')->toArray();
+
+            // Fetch loan and deposit counts in bulk
+            $loanCounts = $this->customerLoanRepository->getCustomerLoansCounts($customerIds, 'active');
+            $depositCounts = $this->customerDepositRepository->getCustomerDpositsCounts($customerIds);
+            $fixedDepositCounts = $this->fixedDepositRepository->getCustomerFixedDepositsCounts($customerIds, 'active');
+
+            // Map counts to customers
+            foreach ($customers as $customer) {
+                $customer->loan_count = $loanCounts[$customer->id]['total'] ?? 0;
+                $customer->running_loan_count = $loanCounts[$customer->id]['paid'] ?? 0;
+                $customer->loan_count_cancelled = $loanCounts[$customer->id]['cancelled'] ?? 0;
+                $customer->loan_count_completed = $loanCounts[$customer->id]['completed'] ?? 0;
+                $customer->deposit_count = $depositCounts[$customer->id]['active'] ?? 0;
+                $customer->fixeddeposit_count = $fixedDepositCounts[$customer->id]['total'] ?? 0;
             }
+            return sendSuccessResponse('Customers fetched successfully.', 200, $customers);
+        
         }
         catch (\Exception $e) {
-            return sendErrorResponse($e->getMessage(), 500);
+           return sendErrorResponse($e->getMessage(), 500);
         }
     }
 

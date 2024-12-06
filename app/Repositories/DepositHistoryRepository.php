@@ -95,6 +95,18 @@ class DepositHistoryRepository extends BaseRepository
         return $data;
     }
 
+    public function getAttendedDepositCustomers($companyId,$memberId,$today){
+        $data = DB::table('deposit_history')
+                ->join('customer_deposits',function ($join) use ($companyId) {
+                    $join->on('deposit_history.deposit_id', '=', 'customer_deposits.id')
+                         ->where('customer_deposits.company_id', $companyId);
+                })
+                ->where('deposit_history.receiver_member_id', $memberId)
+                ->whereDate('deposit_history.action_date', $today)
+                ->pluck('customer_deposits.customer_id')->toArray();
+        return $data;
+    }
+
 
     // You can add any specific methods related to User here
 }

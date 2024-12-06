@@ -32,6 +32,23 @@ class FixedDepositRepository extends BaseRepository
         return $deposits;
     }
 
+    public function getCustomerFixedDepositsCounts(array $customerIds, string $status)
+    {
+        return $this->model
+            ->selectRaw('customer_id, COUNT(*) as total, 
+                        SUM(CASE WHEN deposit_status = "started" THEN 1 ELSE 0 END) as running,
+                        SUM(CASE WHEN deposit_status = "cancelled" THEN 1 ELSE 0 END) as cancelled,
+                        SUM(CASE WHEN deposit_status = "completed" THEN 1 ELSE 0 END) as completed')
+            ->whereIn('customer_id', $customerIds)
+            ->when($status, function ($query, $status) {
+                return $query->where('status', $status);
+            })
+            ->groupBy('customer_id')
+            ->get()
+            ->keyBy('customer_id')
+            ->toArray();
+    }
+
 
     public function getTotalAttendedDepositCustomer($depositId){
         //get unique customer count

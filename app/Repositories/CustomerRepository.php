@@ -24,7 +24,9 @@ class CustomerRepository extends BaseRepository
 
     public function getAllCustomers($company_id, $status = null)
     {
-        return $this->model->with('user')
+        $selectedColumns = ['id', 'user_id', 'company_id', 'customer_no', 'name', 'mobile', 'email','join_date','aadhar_no', 'image', 'adhar_front', 'adhar_back', 'address', 'status'];
+        return $this->model->select($selectedColumns)
+                ->with('user')
                 ->where('company_id', $company_id)
                 ->when($status, function ($query, $status) {
                     return $query->where('status', $status);

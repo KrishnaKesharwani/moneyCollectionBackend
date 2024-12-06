@@ -122,13 +122,34 @@ class CustomerDepositRepository extends BaseRepository
     }
 
 
-    public function getDepositsCount($company_id,$status = null){
-        return $this->model->where('company_id', $company_id)
+    public function getDepositsCount($companyId=null,$status = null,$customerId = null){
+        return $this->model
+        ->when($companyId, function ($query, $companyId) {
+            return $query->where('company_id', $companyId);
+        })
+        ->when($customerId, function ($query, $customerId) {
+            return $query->whereIn('customer_id', $customerId);
+        })
         ->when($status, function ($query, $status) {
             return $query->where('status', $status);
         })
         ->count();
     }
+
+
+    public function getCustomerDpositsCounts(array $customerIds)
+    {
+        return $this->model
+            ->selectRaw('customer_id, COUNT(*) as total, 
+                        SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) as active,
+                        SUM(CASE WHEN status = "inactive" THEN 1 ELSE 0 END) as inactive')
+            ->whereIn('customer_id', $customerIds)
+            ->groupBy('customer_id')
+            ->get()
+            ->keyBy('customer_id')
+            ->toArray();
+    }
+
 
     /**
      * Get distinct customer id of deposits by company id with optional date range
@@ -139,13 +160,16 @@ class CustomerDepositRepository extends BaseRepository
      * @return array
      */
 
-    public function getDepositCustomersIdbyCompany($companyId,$fromDate=null,$toDate=null){
+    public function getDepositCustomersIdbyCompany($companyId,$fromDate=null,$toDate=null,$memberId=null){
         return $this->model->where('company_id', $companyId)
                         ->when($fromDate, function ($query, $fromDate) {
                             return $query->whereDate('created_at','>=', $fromDate);
                         })
                         ->when($toDate, function ($query, $toDate) {
                             return $query->whereDate('created_at','<=', $toDate);
+                        })
+                        ->when($memberId, function ($query, $memberId) {
+                            return $query->where('assigned_member_id', $memberId);
                         })
                         ->distinct('customer_id')
                         ->where('status', 'active')

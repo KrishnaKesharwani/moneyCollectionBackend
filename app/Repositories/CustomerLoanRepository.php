@@ -214,19 +214,51 @@ class CustomerLoanRepository extends BaseRepository
             ->pluck('customer_id');
     }
 
-    public function getCustomerLoansCount($company_id, $status) {
-        return $this->model->where('company_id', $company_id)
-               ->when($status, function ($query, $status) {
-                   return $query->where('status', $status);
-               })
+    public function getCustomerLoansCount($companyId=null, $status=null,$customerId=null,$loanStatus=null) {
+        return $this->model
+                ->when($companyId, function ($query, $companyId) {
+                    return $query->where('company_id', $companyId);
+                })
+                ->when($customerId, function ($query, $customerId) {
+                    return $query->where('customer_id', $customerId);
+                })
+                ->when($status, function ($query, $status) {
+                    return $query->where('status', $status);
+                })
+               ->when($loanStatus, function ($query, $loanStatus) {
+                return $query->where('loan_status', $loanStatus);
+                })
+                ->where('loan_status', '!=', 'pending')
                ->count();
     }
 
+    public function getCustomerLoansCounts(array $customerIds, string $status)
+    {
+        return $this->model
+            ->selectRaw('customer_id, COUNT(*) as total, 
+                        SUM(CASE WHEN loan_status = "paid" THEN 1 ELSE 0 END) as paid,
+                        SUM(CASE WHEN loan_status = "cancelled" THEN 1 ELSE 0 END) as cancelled,
+                        SUM(CASE WHEN loan_status = "completed" THEN 1 ELSE 0 END) as completed')
+            ->whereIn('customer_id', $customerIds)
+            ->when($status, function ($query, $status) {
+                return $query->where('status', $status);
+            })
+            ->where('loan_status', '!=', 'pending')
+            ->groupBy('customer_id')
+            ->get()
+            ->keyBy('customer_id')
+            ->toArray();
+    }
 
-    public function getLoanCustomersIdbyCompany($companyId,$fromDate=null,$toDate=null){
+
+
+    public function getLoanCustomersIdbyCompany($companyId,$fromDate=null,$toDate=null,$memberId=null) {
         return $this->model->where('company_id', $companyId)
                         ->when($fromDate, function ($query, $fromDate) {
                             return $query->whereDate('start_date','>=', $fromDate);
+                        })
+                        ->when($memberId, function ($query) use ($memberId) {
+                            return $query->where('assigned_member_id', $memberId);
                         })
                         ->when($toDate, function ($query, $toDate) {
                             return $query->whereDate('start_date','<=', $toDate);

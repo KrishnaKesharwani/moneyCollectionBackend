@@ -200,6 +200,7 @@ class MemberFinanceController extends Controller
             $updateData = [
                 'paid_amount' => $request->amount,
                 'payment_status' => 'paid',
+                'balance' => $remainingAmount,
                 'remaining_amount' => $remainingAmount,
                 'details' => $request->details
             ];

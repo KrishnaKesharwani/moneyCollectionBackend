@@ -777,6 +777,7 @@ class CustomerLoanController extends Controller
 
         $inputData = [
             'company_id' => 'required|exists:companies,id',
+            'member_id' => 'required|exists:members,id',
         ];
 
         $validator = Validator::make($request->all(), $inputData);
@@ -787,33 +788,47 @@ class CustomerLoanController extends Controller
         }
 
         try{
-            $memberId           = $request->member_id ?? null;
-            $totalLoanAmount    = $this->customerLoanRepository->getTotalLoanAmount($request->company_id,$memberId);
-            $loanIds            = $this->customerLoanRepository->getRunningLoanIds($request->company_id,$memberId);
-            $totalCustomerCount = $this->customerLoanRepository->getTotalCustomer($request->company_id,'paid',$memberId);
-            if(count($loanIds) > 0)
-            {
-                $totalPaidAmount = $this->loanHistoryRepository->getTotalPaidAmountByLoanIds($loanIds);
-                $totalRemaingAmount = $totalLoanAmount - $totalPaidAmount;
-                //get the percentage of paid amount
-                $percentage = ($totalPaidAmount / $totalLoanAmount) * 100;
-                //get the percentage of remaining amount
-                $remainingPercentage = ($totalRemaingAmount / $totalLoanAmount) * 100;
+            $memberId           = $request->member_id;
+            $companyId          = $request->company_id;
+            $today              = Carbon::now()->format('Y-m-d');
+            //total deposit customers
+            $totalDepositCustomer   = $this->customerDepositRepository->getDepositCustomersIdbyCompany($companyId,null,null,$memberId);
+            //total loan customers
+            $totalLoanCustomer      = $this->customerLoanRepository->getLoanCustomersIdbyCompany($companyId,null,null,$memberId);
 
-                $loanData = [
-                    'total_loan_amount' => (float)$totalLoanAmount,
-                    'total_paid_amount' => (float)$totalPaidAmount,
-                    'total_remaining_amount' => $totalRemaingAmount,
-                    'total_cusotomer' => $totalCustomerCount,
-                    'paid_percentage' => round($percentage,2),
-                    'remaining_percentage' => round($remainingPercentage,2), 
-                ];
-                return sendSuccessResponse('Loans found successfully!', 200, $loanData);
+            $todayLoanCustomer      = $this->loanHistoryRepository->getAttendedCustomerIds($companyId,$memberId,$today);
+
+            $todayDepositCusotmer   = $this->depositHistoryRepository->getAttendedDepositCustomers($companyId,$memberId,$today);
+
+
+            $totalCustomer = 0;
+            if(count($totalDepositCustomer)>0 && count($totalLoanCustomer)>0){
+                $totalCustomer = count(array_unique(array_merge($totalDepositCustomer,$totalLoanCustomer)));
+            }else if(count($totalDepositCustomer)>0){
+                $totalCustomer = count($totalDepositCustomer);
+            }else if(count($totalLoanCustomer)>0){
+                $totalCustomer = count($totalLoanCustomer);
             }
-            else
-            {
-                return sendErrorResponse('Loans not found!', 404);
+
+            $attendedCustomers = 0;
+            if(count($todayLoanCustomer)>0 && count($todayDepositCusotmer)>0){
+                $attendedCustomers = count(array_unique(array_merge($todayLoanCustomer,$todayDepositCusotmer)));
+            }else if(count($todayLoanCustomer)>0){
+                $attendedCustomers = count($todayLoanCustomer);
+            }else if(count($todayDepositCusotmer)>0){
+                $attendedCustomers = count($todayDepositCusotmer);
             }
+
+            $remainingCustomer = $totalCustomer - $attendedCustomers;
+
+
+            $loanData = [
+                'attended_customers' => $attendedCustomers,
+                'total_customers' => $totalCustomer,
+                'remaining_customers' => $remainingCustomer 
+            ];
+            return sendSuccessResponse('Loans found successfully!', 200, $loanData);
+        
         }
         catch (\Exception $e) {
             return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
