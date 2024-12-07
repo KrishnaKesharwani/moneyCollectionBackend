@@ -117,7 +117,8 @@ class MemberController extends Controller
         $validatedData = $request->all();
         
         try {
-            $company = $this->companyRepository->find($request->company_id);
+            $companyId = $request->company_id;
+            $company = $this->companyRepository->find($companyId);
             DB::beginTransaction();
             $member_no = 0;
             if(!$company)
@@ -137,20 +138,26 @@ class MemberController extends Controller
             }
 
             $checkUser = User::where('email', $request->member_login_id)
-                ->orWhere('mobile', $request->mobile)
                 ->first();
 
+            $checkMobile = DB::table('users')->where('users.mobile', $request->mobile)
+                        ->join('members', function ($join) use($companyId) { 
+                        $join->on('members.user_id', '=', 'users.id')
+                                ->where('members.company_id', '=', $companyId);
+                    })
+                    ->select('users.id','users.name','users.email','users.mobile','users.status')
+                    ->first();
             if ($checkUser)
             {
                 if ($checkUser->email === $request->member_login_id) 
                 {
                     return sendErrorResponse('Email already exists!', 409);
                 }
-                
-                if ($checkUser->mobile == $request->mobile)
-                {
-                    return sendErrorResponse('Mobile already exists!', 409);
-                }
+            }
+
+            if ($checkMobile)
+            {
+                return sendErrorResponse('Mobile already exists!', 409, null, $checkMobile);
             }
 
 

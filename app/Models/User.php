@@ -25,7 +25,8 @@ class User extends Authenticatable
         'password',
         'password_hint',
         'mobile',
-        'status'
+        'status',
+        'language',
     ];
 
     /**
@@ -64,5 +65,10 @@ class User extends Authenticatable
     public function customer()
     {
         return $this->hasOne(Customer::class);
+    }
+
+    public function getLanguageAttribute($value)
+    {
+        return $value ?? 'english';
     }
 }

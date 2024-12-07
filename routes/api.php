@@ -126,8 +126,10 @@ Route::middleware('api')->group(function () {
         Route::post('download-loans', [CustomerLoanController::class, 'downloadLoanList']);
         Route::post('download-deposits', [CustomerDepositController::class, 'downloadDepositList']);
         Route::post('download-loan-history', [CustomerLoanController::class, 'downloadLoanHistory']);
-        //change password
+        //user
         Route::post('changepassword', [UserController::class, 'changePassword']);
+        Route::put('update-user-language', [UserController::class, 'updateLanguage']);
+
     });
 });
 

@@ -45,4 +45,20 @@ class UserController extends Controller
         // Return success response
         return sendSuccessResponse('Password successfully updated.', 200);
     }
+
+
+    public function updateLanguage(Request $request){
+        $validator = Validator::make($request->all(), [
+            'language' => 'required',
+        ]);
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+        $user = Auth::user();
+        $user->language = $request->language;
+        if($user->save()){
+            return sendSuccessResponse('Language successfully updated.', 200);
+        }
+        return sendErrorResponse('Something went wrong.', 422);
+    }
 }

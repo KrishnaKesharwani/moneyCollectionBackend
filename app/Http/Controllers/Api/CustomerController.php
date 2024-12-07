@@ -138,7 +138,8 @@ class CustomerController extends Controller
         
         try {
             DB::beginTransaction();
-            $company = $this->companyRepository->find($request->company_id);
+            $companyId = $request->company_id;
+            $company = $this->companyRepository->find($companyId);
             $customer_no = 0;
             if(!$company)
             {
@@ -156,9 +157,14 @@ class CustomerController extends Controller
                 $customer_no                = $companyprefix.'-'.$company->id.'-'.$company->customer_count + 1;
             }
 
-            $checkUser = User::where('email', $request->customer_login_id)
-                ->orWhere('mobile', $request->mobile)
-                ->first();
+            $checkUser = User::where('email', $request->customer_login_id)->first();
+            $checkMobile = DB::table('users')->where('users.mobile', $request->mobile)
+                         ->join('customers', function ($join) use($companyId) { 
+                            $join->on('customers.user_id', '=', 'users.id')
+                                 ->where('customers.company_id', '=', $companyId);
+                        })
+                        ->select('users.id','users.name','users.email','users.mobile','users.status')
+                        ->first();
 
             if ($checkUser)
             {
@@ -166,11 +172,11 @@ class CustomerController extends Controller
                 {
                     return sendErrorResponse('Email already exists!', 409);
                 }
-                
-                if ($checkUser->mobile == $request->mobile)
-                {
-                    return sendErrorResponse('Mobile already exists!', 409);
-                }
+            }
+
+            if ($checkMobile)
+            {
+                return sendErrorResponse('Mobile already exists!', 409, null, $checkMobile);
             }
 
             // Process the base64 images
