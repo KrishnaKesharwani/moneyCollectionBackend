@@ -251,6 +251,39 @@ class CustomerLoanRepository extends BaseRepository
     }
 
 
+    public function getCustomerLoansAmount($companyId,array $customerIds, string $loan_status)
+    {
+        return $this->model
+            ->selectRaw('customer_id, sum(loan_amount) as total')
+            ->whereIn('customer_id', $customerIds)
+            ->where('company_id', $companyId)
+            ->where('status', 'active')
+            ->when($loan_status, function ($query, $loan_status) {
+                return $query->where('loan_status', $loan_status);
+            })
+            ->groupBy('customer_id')
+            ->get()
+            ->keyBy('customer_id')
+            ->toArray();
+    }
+
+
+    public function getCustomerLoansHistoryAmount($companyId, array $customerIds, string $loanStatus)
+    {
+        return $this->model
+            ->join('loan_history', 'customer_loans.id', '=', 'loan_history.loan_id') // Join loans with loan_history table
+            ->selectRaw('customer_loans.customer_id, SUM(loan_history.amount) as total') // Calculate sum from loan_history
+            ->whereIn('customer_loans.customer_id', $customerIds) // Filter by customer IDs
+            ->where('customer_loans.company_id', $companyId) // Filter by company ID
+            ->where('customer_loans.status', 'active') // Filter by loan status in loans table
+            ->when($loanStatus, function ($query, $loanStatus) {
+                return $query->where('customer_loans.loan_status', $loanStatus); // Apply additional loan_status filter
+            })
+            ->groupBy('customer_loans.customer_id') // Group by customer_id
+            ->get()
+            ->keyBy('customer_id') // Organize results using customer_id as the key
+            ->toArray();
+    }
 
     public function getLoanCustomersIdbyCompany($companyId,$fromDate=null,$toDate=null,$memberId=null) {
         return $this->model->where('company_id', $companyId)

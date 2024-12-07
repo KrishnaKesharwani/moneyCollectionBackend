@@ -68,7 +68,8 @@ class CustomerController extends Controller
 
         try{
             $status = $request->status ?? null;
-            $customers = $this->customerRepository->getAllCustomers($request->company_id,$status);
+            $companyId = $request->company_id;
+            $customers = $this->customerRepository->getAllCustomers($companyId,$status);
 
             if($customers->isEmpty())
             {
@@ -81,7 +82,8 @@ class CustomerController extends Controller
             $loanCounts = $this->customerLoanRepository->getCustomerLoansCounts($customerIds, 'active');
             $depositCounts = $this->customerDepositRepository->getCustomerDpositsCounts($customerIds);
             $fixedDepositCounts = $this->fixedDepositRepository->getCustomerFixedDepositsCounts($customerIds, 'active');
-
+            $loanAmount = $this->customerLoanRepository->getCustomerLoansAmount($companyId,$customerIds, 'paid');
+            $loanPaidAmount = $this->customerLoanRepository->getCustomerLoansHistoryAmount($companyId,$customerIds, 'paid');
             // Map counts to customers
             foreach ($customers as $customer) {
                 $customer->loan_count = $loanCounts[$customer->id]['total'] ?? 0;
@@ -90,12 +92,22 @@ class CustomerController extends Controller
                 $customer->loan_count_completed = $loanCounts[$customer->id]['completed'] ?? 0;
                 $customer->deposit_count = $depositCounts[$customer->id]['active'] ?? 0;
                 $customer->fixeddeposit_count = $fixedDepositCounts[$customer->id]['total'] ?? 0;
+                $customer->loan_amount = $loanAmount[$customer->id]['total'] ?? 0;
+                $customer->loan_paid_amount = $loanPaidAmount[$customer->id]['total'] ?? 0;
+                if(isset($loanPaidAmount[$customer->id]['total']))
+                {
+                    $customer->pending_amount = $loanAmount[$customer->id]['total']-$loanPaidAmount[$customer->id]['total'];
+                }
+                else{
+                    $customer->pending_amount = $loanAmount[$customer->id]['total'] ?? 0;
+                }
             }
+
             return sendSuccessResponse('Customers fetched successfully.', 200, $customers);
         
         }
         catch (\Exception $e) {
-           return sendErrorResponse($e->getMessage(), 500);
+           return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
         }
     }
 

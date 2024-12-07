@@ -83,6 +83,7 @@ class LoanHistoryRepository extends BaseRepository
                     })
                     ->where('loan_history.receiver_member_id', $memberId)
                     ->whereDate('loan_history.receive_date','=',$today)
+                    ->distinct('customer_loans.customer_id')
                     ->pluck('customer_loans.customer_id')->toArray();
         return $customerIds;
     }

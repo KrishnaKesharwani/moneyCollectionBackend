@@ -514,13 +514,9 @@ class CustomerLoanController extends Controller
                 $i = 1;
                 foreach ($collection as $key => $value) {
                     // Deduct the installment amount from the remaining amount
-                    if($i == 1){
-                        $collection[$key]->balance = (float)$loanAmount;
-                    }else{
-                        $remainingAmount -= $collection[$key - 1]->amount; 
-                        // Set the remaining amount for each collection entry
-                        $collection[$key]->balance = $remainingAmount;
-                    }
+                    $remainingAmount -= $collection[$key]->amount; 
+                    // Set the remaining amount for each collection entry
+                    $collection[$key]->balance = $remainingAmount;
                     $i++;
                 }                
                 // Sort the collection by 'created_at' in descending order using sortByDesc
@@ -528,6 +524,7 @@ class CustomerLoanController extends Controller
                 $responseData = 
                 [
                     'collection' => $sortedCollection,
+                    'remaining_amount' => $remainingAmount
                 ];
                 return sendSuccessResponse('Collection found successfully!', 200, $responseData);
             }

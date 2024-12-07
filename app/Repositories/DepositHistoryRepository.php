@@ -103,6 +103,7 @@ class DepositHistoryRepository extends BaseRepository
                 })
                 ->where('deposit_history.receiver_member_id', $memberId)
                 ->whereDate('deposit_history.action_date', $today)
+                ->distinct('customer_deposits.customer_id')
                 ->pluck('customer_deposits.customer_id')->toArray();
         return $data;
     }
