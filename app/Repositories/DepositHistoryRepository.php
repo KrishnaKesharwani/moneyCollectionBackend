@@ -101,7 +101,9 @@ class DepositHistoryRepository extends BaseRepository
                     $join->on('deposit_history.deposit_id', '=', 'customer_deposits.id')
                          ->where('customer_deposits.company_id', $companyId);
                 })
-                ->where('deposit_history.receiver_member_id', $memberId)
+                ->when($memberId, function ($query, $memberId) {
+                    $query->where('deposit_history.receiver_member_id', $memberId);
+                })
                 ->whereDate('deposit_history.action_date', $today)
                 ->distinct('customer_deposits.customer_id')
                 ->pluck('customer_deposits.customer_id')->toArray();

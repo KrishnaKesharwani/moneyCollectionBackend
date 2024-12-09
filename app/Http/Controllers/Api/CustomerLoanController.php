@@ -92,7 +92,7 @@ class CustomerLoanController extends Controller
             $loans = $this->customerLoanRepository->getAllCustomerLoans($request->company_id,$loanStatus,$status,$member,$customer);
             if($loans->isEmpty())
             {
-                return sendErrorResponse('Loans not found!', 404);
+                return sendErrorResponse('Loans not found!', 200);
             }
             else
             {
@@ -506,7 +506,7 @@ class CustomerLoanController extends Controller
             $collection = $this->customerLoanRepository->getLoanHistory($request->customer_id,$request->loan_id,$fromDate);
             if($collection->isEmpty())
             {
-                return sendErrorResponse('Collection not found!', 404);
+                return sendErrorResponse('Collection not found!', 200);
             }
             else
             {
@@ -774,7 +774,6 @@ class CustomerLoanController extends Controller
 
         $inputData = [
             'company_id' => 'required|exists:companies,id',
-            'member_id' => 'required|exists:members,id',
         ];
 
         $validator = Validator::make($request->all(), $inputData);
@@ -785,7 +784,7 @@ class CustomerLoanController extends Controller
         }
 
         try{
-            $memberId           = $request->member_id;
+            $memberId           = $request->member_id ?? null;
             $companyId          = $request->company_id;
             $today              = Carbon::now()->format('Y-m-d');
             //total deposit customers

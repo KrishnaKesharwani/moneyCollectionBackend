@@ -81,7 +81,9 @@ class LoanHistoryRepository extends BaseRepository
                         $join->on('customer_loans.id', '=', 'loan_history.loan_id')
                             ->where('customer_loans.company_id', $companyId);
                     })
-                    ->where('loan_history.receiver_member_id', $memberId)
+                    ->when($memberId, function ($query, $memberId) {
+                        return $query->where('loan_history.receiver_member_id', $memberId);
+                    })
                     ->whereDate('loan_history.receive_date','=',$today)
                     ->distinct('customer_loans.customer_id')
                     ->pluck('customer_loans.customer_id')->toArray();

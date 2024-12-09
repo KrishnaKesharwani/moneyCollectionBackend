@@ -63,7 +63,7 @@ class LoanHistoryController extends Controller
         $member = $this->memberRepository->getMemberByUserId($userId);
         if(!$member)
         {
-            return sendErrorResponse('Member not found!', 404);
+            return sendErrorResponse('Member not found!', 200);
         }
 
         $memberId = $member->id;
@@ -72,17 +72,17 @@ class LoanHistoryController extends Controller
 
         if(!$loan)
         {
-            return sendErrorResponse('Loan not found!', 404);
+            return sendErrorResponse('Loan not found!', 200);
         }
         else
         {
             if($loan->assigned_member_id != $memberId)
             {
-                return sendErrorResponse('You are not the assigned member of this loan for collection!', 404);
+                return sendErrorResponse('You are not the assigned member of this loan for collection!', 200);
             }
 
             if($loan->loan_status != 'paid'){
-                return sendErrorResponse('This loan is not paid!', 404);
+                return sendErrorResponse('This loan is not paid!', 200);
             }
         }
 
@@ -246,7 +246,7 @@ class LoanHistoryController extends Controller
 
             if(count($collectedData)==0)
             {
-                return sendErrorResponse('Collection not found!', 404);
+                return sendErrorResponse('Collection not found!', 200);
             }
             else
             {
