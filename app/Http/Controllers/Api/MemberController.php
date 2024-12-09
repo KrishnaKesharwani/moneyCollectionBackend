@@ -223,6 +223,7 @@ class MemberController extends Controller
         $validatedData = $request->all();
         
         try {
+            $companyId      = $request->company_id;
             $company        = $this->companyRepository->find($request->company_id);
             if(!$company)
             {
@@ -237,7 +238,14 @@ class MemberController extends Controller
 
             $memberUserId   = $member->user_id;
 
-            $checkUserMobile = User::where('id', '!=', $memberUserId)->where('mobile', $request->mobile)->count();
+            $checkUserMobile = DB::table('users')
+                        ->where('users.id', '!=', $memberUserId)
+                        ->where('users.mobile', $request->mobile)
+                        ->join('members', function ($join) use($companyId) { 
+                        $join->on('members.user_id', '=', 'users.id')
+                                ->where('members.company_id', '=', $companyId);
+                    })
+                    ->count();
             
             if($checkUserMobile>0){
                 return sendErrorResponse('Mobile already exists!', 409);

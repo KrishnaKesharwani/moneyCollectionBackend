@@ -244,6 +244,7 @@ class CustomerController extends Controller
         
         try {
             DB::beginTransaction();
+            $companyId      = $request->company_id;
             $company        = $this->companyRepository->find($request->company_id);
             if(!$company)
             {
@@ -258,7 +259,13 @@ class CustomerController extends Controller
 
             $customerUserId   = $customer->user_id;
 
-            $checkUserMobile = User::where('id', '!=', $customerUserId)->where('mobile', $request->mobile)->count();
+            $checkUserMobile = DB::table('users')->where('users.id', '!=', $customerUserId)->where('users.mobile', $request->mobile)
+            ->join('customers', function ($join) use($companyId) { 
+               $join->on('customers.user_id', '=', 'users.id')
+                    ->where('customers.company_id', '=', $companyId);
+           })
+           ->count();
+
             
             if($checkUserMobile>0){
                 return sendErrorResponse('Mobile already exists!', 409);
