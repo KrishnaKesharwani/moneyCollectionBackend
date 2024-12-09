@@ -3,6 +3,8 @@
 namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
+use App\Http\Controllers\ScheduleController;
+
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
 class Kernel extends ConsoleKernel
@@ -12,7 +14,14 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->call(function () {
+            $controller = new ExportController();
+            $controller->deleteExportFiles();
+        })->dailyAt('00:00'); // Runs daily at midnight
+
+        //for set cron job
+        //* * * * * php /path-to-your-project/artisan schedule:run >> /dev/null 2>&1
+
     }
 
     /**

@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\CustomerLoanController;
+use App\Http\Controllers\ScheduleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,7 +18,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/basecompany-dashboard',[CustomerLoanController::class,'companyDashboard']);
+Route::get('/delete-export-files', [ScheduleController::class, 'deleteExportFiles']);
+
 Route::get('/clear-cache', function () {
     // Run the optimize:clear command
     Artisan::call('optimize:clear');
