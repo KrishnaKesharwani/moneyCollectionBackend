@@ -250,14 +250,14 @@ class LoanHistoryController extends Controller
             }
             else
             {
-            $responseData = 
-                [
-                    'collection' => $collectedData,
-                    'attended_customer' => count($attendedCustomer)>0?count(array_unique($attendedCustomer)):0,
-                    'collect_money' => $totalCollection,
-                    'total_customer' => $totalCustomerId,
-                ];
-            return $responseData;
+                $responseData = 
+                    [
+                        'collection' => $collectedData,
+                        'attended_customer' => count($attendedCustomer)>0?count(array_unique($attendedCustomer)):0,
+                        'collect_money' => $totalCollection,
+                        'total_customer' => $totalCustomerId,
+                    ];
+                return sendSuccessResponse('Collection found successfully!', 200, $responseData);
             }
         }
         catch (\Exception $e) {
