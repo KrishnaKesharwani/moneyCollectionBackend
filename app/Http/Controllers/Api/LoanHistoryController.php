@@ -261,7 +261,7 @@ class LoanHistoryController extends Controller
             }
         }
         catch (\Exception $e) {
-            return sendErrorResponse($e->getMessage(), 500);
+            return sendErrorResponse($e->getMessage(), 500); 
         }
     }
 }

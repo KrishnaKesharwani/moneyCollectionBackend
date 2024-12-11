@@ -63,6 +63,7 @@ class LoanHistoryRepository extends BaseRepository
         return $amount;
     }
 
+
     public function getLoanReceivedAmountByDatewise($companyId, $memberId, $fromDate, $toDate){
         $amount = DB::table('loan_history')
                     ->join('customer_loans', 'loan_history.loan_id', '=', 'customer_loans.id')
@@ -70,6 +71,19 @@ class LoanHistoryRepository extends BaseRepository
                     ->where('loan_history.receiver_member_id', $memberId)
                     ->whereDate('loan_history.receive_date','>=',$fromDate)
                     ->whereDate('loan_history.receive_date','<=',$toDate)
+                    ->sum('loan_history.amount');
+        return $amount;
+    }
+
+
+    public function getTotalPaidLoanAmount($companyId){
+        $amount = DB::table('loan_history')
+                    ->join('customer_loans', function ($join) use ($companyId) {
+                        $join->on('customer_loans.id', '=', 'loan_history.loan_id')
+                            ->where('customer_loans.company_id', $companyId)
+                            ->where('customer_loans.status', 'active')
+                            ->where('customer_loans.loan_status', 'paid');
+                    })
                     ->sum('loan_history.amount');
         return $amount;
     }
@@ -89,6 +103,8 @@ class LoanHistoryRepository extends BaseRepository
                     ->pluck('customer_loans.customer_id')->toArray();
         return $customerIds;
     }
+
+
     
     
     // You can add any specific methods related to User here

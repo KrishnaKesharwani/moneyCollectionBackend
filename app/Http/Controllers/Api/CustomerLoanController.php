@@ -817,12 +817,36 @@ class CustomerLoanController extends Controller
 
             $remainingCustomer = $totalCustomer - $attendedCustomers;
 
+            if($memberId==null){
+                $totalLoanAmount = $this->customerLoanRepository->getTotalLoanAmount($companyId);
+                $totalPaidloanAmount = $this->loanHistoryRepository->getTotalPaidLoanAmount($companyId);
 
-            $loanData = [
-                'attended_customers' => $attendedCustomers,
-                'total_customers' => $totalCustomer,
-                'remaining_customers' => $remainingCustomer 
-            ];
+                $totalPaidPercentage = 0;
+                if($totalLoanAmount>0){
+                    $totalPaidPercentage = round(($totalPaidloanAmount/$totalLoanAmount)*100);
+                }
+
+                $totalRemainingAmount = $totalLoanAmount - $totalPaidloanAmount;
+
+                $totalRemainingPercentage = 0;
+                if($totalLoanAmount>0){
+                    $totalRemainingPercentage = round(($totalRemainingAmount/$totalLoanAmount)*100);
+                }
+
+                $loanData = [
+                    'total_loan_amount' => $totalLoanAmount,
+                    'total_paid_loan_amount' => $totalPaidloanAmount,
+                    'total_remaining_loan_amount' => $totalRemainingAmount,
+                    'total_paid_percentage' => $totalPaidPercentage,
+                    'total_remaining_percentage' => $totalRemainingPercentage
+                ];
+            }else{
+                $loanData = [
+                    'attended_customers' => $attendedCustomers,
+                    'total_customers' => $totalCustomer,
+                    'remaining_customers' => $remainingCustomer 
+                ];
+            }
             return sendSuccessResponse('Loans found successfully!', 200, $loanData);
         
         }
