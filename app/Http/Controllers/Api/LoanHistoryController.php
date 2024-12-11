@@ -63,7 +63,7 @@ class LoanHistoryController extends Controller
         $member = $this->memberRepository->getMemberByUserId($userId);
         if(!$member)
         {
-            return sendErrorResponse('Member not found!', 200);
+            return sendErrorResponse('Member not found!', 404);
         }
 
         $memberId = $member->id;
@@ -72,7 +72,7 @@ class LoanHistoryController extends Controller
 
         if(!$loan)
         {
-            return sendErrorResponse('Loan not found!', 200);
+            return sendErrorResponse('Loan not found!', 404);
         }
         else
         {

@@ -79,7 +79,7 @@ class MemberController extends Controller
 
             if($members->isEmpty())
             {
-                return sendErrorResponse('Members not found!', 404);
+                return sendErrorResponse('Members not found!', 200);
             }
             else
             {
@@ -191,7 +191,7 @@ class MemberController extends Controller
             }
             else
             {
-                return sendErrorResponse('Member not created!', 404);
+                return sendErrorResponse('Member not created!', 500);
             }
         }
         catch (Exception $e) {
@@ -274,7 +274,7 @@ class MemberController extends Controller
             }
             else
             {
-                return sendErrorResponse('Member not created!', 404);
+                return sendErrorResponse('Member not created!', 500);
             }
         }
         catch (Exception $e) {

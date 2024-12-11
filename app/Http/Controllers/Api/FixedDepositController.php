@@ -53,7 +53,7 @@ class FixedDepositController extends Controller
             $deposits = $this->fixedDepositRepository->getAllFixedDeposits($request->company_id,$status,$customer);
             if($deposits->isEmpty())
             {
-                return sendErrorResponse('Deposits not found!', 404);
+                return sendErrorResponse('Deposits not found!', 200);
             }
             else
             {
@@ -136,7 +136,7 @@ class FixedDepositController extends Controller
             }
             else
             {
-                return sendErrorResponse('Fixed Deposit not added!', 404);
+                return sendErrorResponse('Fixed Deposit not added!', 500);
             }
         }
         catch (Exception $e) {
@@ -186,7 +186,7 @@ class FixedDepositController extends Controller
             }
             else
             {
-                return sendErrorResponse('Fixed Deposit not updated!', 404);
+                return sendErrorResponse('Fixed Deposit not updated!', 500);
             }
         }
         catch (Exception $e) {
@@ -228,7 +228,7 @@ class FixedDepositController extends Controller
             }
             else
             {
-                return sendErrorResponse('Deposit status not updated',422);
+                return sendErrorResponse('Deposit status not updated',500);
             }
         }
         catch (Exception $e)

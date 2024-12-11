@@ -99,7 +99,7 @@ class CompanyController extends Controller
         }
         if($companies->isEmpty())
         {
-            return sendErrorResponse('No companies found!', 404);
+            return sendErrorResponse('No companies found!', 200);
         }
         else
         {
@@ -459,7 +459,7 @@ class CompanyController extends Controller
         }
         else
         {
-            return sendErrorResponse('Company not found!', 404);
+            return sendErrorResponse('Company not found!', 200);
         }
     }
 }

@@ -48,7 +48,7 @@ class OfferController extends Controller
 
             if($offers->isEmpty())
             {
-                return sendErrorResponse('offers not found!', 404);
+                return sendErrorResponse('offers not found!', 200);
             }
             else
             {
@@ -107,7 +107,7 @@ class OfferController extends Controller
             }
             else
             {
-                return sendErrorResponse('Offer not created!', 404);
+                return sendErrorResponse('Offer not created!', 500);
             }
         }
         catch (Exception $e) {
@@ -168,7 +168,7 @@ class OfferController extends Controller
             }
             else
             {
-                return sendErrorResponse('Offer not updated!', 404);
+                return sendErrorResponse('Offer not updated!', 500);
             }
         }
         catch (Exception $e) {

@@ -59,6 +59,6 @@ class UserController extends Controller
         if($user->save()){
             return sendSuccessResponse('Language successfully updated.', 200);
         }
-        return sendErrorResponse('Something went wrong.', 422);
+        return sendErrorResponse('Something went wrong.', 500);
     }
 }

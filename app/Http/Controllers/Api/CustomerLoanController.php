@@ -172,7 +172,7 @@ class CustomerLoanController extends Controller
             $loans = $this->customerLoanRepository->getAllmemberNotAssignedLoans($request->company_id,$loanStatus);
             if($loans->isEmpty())
             {
-                return sendErrorResponse('Loans not found!', 404);
+                return sendErrorResponse('Loans not found!', 200);
             }
             else
             {
@@ -283,7 +283,7 @@ class CustomerLoanController extends Controller
             }
             else
             {
-                return sendErrorResponse('Loan not provided!', 404);
+                return sendErrorResponse('Loan not provided!', 500);
             }
         }
         catch (Exception $e) {
@@ -363,7 +363,7 @@ class CustomerLoanController extends Controller
             }
             else
             {
-                return sendErrorResponse('Something is wrong!', 404);
+                return sendErrorResponse('Something is wrong!', 500);
             }
         }
         catch (Exception $e) {
@@ -463,7 +463,7 @@ class CustomerLoanController extends Controller
             }
             else
             {
-                return sendErrorResponse('Loan not provided!', 404);
+                return sendErrorResponse('Loan not provided!', 500);
             }
         }
         catch (Exception $e) {
@@ -497,7 +497,7 @@ class CustomerLoanController extends Controller
             $loanAmount = 0;
             if(!$loan)
             {
-                return sendErrorResponse('Loan not found!', 404);
+                return sendErrorResponse('Loan not found!', 200);
             }
             else{
                 $loanAmount = $loan->loan_amount;
@@ -570,7 +570,7 @@ class CustomerLoanController extends Controller
             }
             else
             {   
-                return sendErrorResponse('Loan member not changed!', 404);
+                return sendErrorResponse('Loan member not changed!', 500);
             }
         }
         catch (Exception $e) {
@@ -607,7 +607,7 @@ class CustomerLoanController extends Controller
                 }
                 else
                 {   
-                    return sendErrorResponse('Loan member not removed!', 404);
+                    return sendErrorResponse('Loan member not removed!', 500);
                 }
             }
             else
@@ -669,7 +669,7 @@ class CustomerLoanController extends Controller
             }
             else
             {
-                return sendErrorResponse('Loan status not updated',422);
+                return sendErrorResponse('Loan status not updated',500);
             }
         }
         catch (Exception $e)
@@ -708,7 +708,7 @@ class CustomerLoanController extends Controller
             $loans = $this->customerLoanRepository->getAllCustomerLoans($request->company_id,$loanStatus,$status,$member,$customer,$startDate,$endDate);
             if($loans->isEmpty())
             {
-                return sendErrorResponse('Loans not found!', 404);
+                return sendErrorResponse('Loans not found!', 200);
             }
             else
             {
@@ -896,27 +896,6 @@ class CustomerLoanController extends Controller
         }
     }
 
-    public function customerDashboardLoanStatus(Request $request){
-
-        $inputData = [
-            'company_id' => 'required|exists:companies,id',
-            'customer_id' => 'required|exists:customers,id',
-        ];
-
-        $validator = Validator::make($request->all(), $inputData);
-        
-
-        if ($validator->fails()) {
-            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
-        }
-
-        try{
-            
-        }
-        catch (\Exception $e) {
-            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
-        }
-    }
 
     public function customerLoanStatusGraph(Request $request){
 
@@ -941,7 +920,7 @@ class CustomerLoanController extends Controller
             $loans = $this->customerLoanRepository->getAllCustomerLoansStatus($request->company_id,$loanStatus,$status,$customer);
             if($loans->isEmpty())
             {
-                return sendErrorResponse('Loans not found!', 404);
+                return sendErrorResponse('Loans not found!', 200);
             }
             else
             {
@@ -1236,7 +1215,7 @@ class CustomerLoanController extends Controller
         $userId = auth()->user()->id;
         $customer = $this->customerRepository->getCustomerbyUserId($userId);
         if(empty($customer)){
-            return sendErrorResponse('Customer not found!', 404);
+            return sendErrorResponse('Customer not found!', 200);
         }else{
             $customerId = $customer->id;
             $companyId  = $customer->company_id;

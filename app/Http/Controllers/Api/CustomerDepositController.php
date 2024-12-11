@@ -83,7 +83,7 @@ class CustomerDepositController extends Controller
             $deposits = $this->customerDepositRepository->getAllCustomerDeposits($request->company_id,$status,$member,$customer);
             if($deposits->isEmpty())
             {
-                return sendErrorResponse('Deposits not found!', 404);
+                return sendErrorResponse('Deposits not found!', 200);
             }
             else
             {
@@ -196,7 +196,7 @@ class CustomerDepositController extends Controller
             }
             else
             {
-                return sendErrorResponse('Deposit not added!', 404);
+                return sendErrorResponse('Deposit not added!', 500);
             }
         }
         catch (Exception $e) {
@@ -377,7 +377,7 @@ class CustomerDepositController extends Controller
             }
             else
             {
-                return sendErrorResponse('Deposits not found!', 404);
+                return sendErrorResponse('Deposits not found!', 200);
             }
         }
         catch (\Exception $e) {
@@ -428,7 +428,7 @@ class CustomerDepositController extends Controller
             }
             else
             {
-                return sendErrorResponse('Deposit not updated!',422);
+                return sendErrorResponse('Deposit not updated!',500);
             }
         }
         catch (Exception $e)
@@ -551,7 +551,7 @@ class CustomerDepositController extends Controller
             }
             else
             {
-                return sendErrorResponse('Deposit Request not added!', 404);
+                return sendErrorResponse('Deposit Request not added!', 500);
             }
         }
         catch (Exception $e) {
@@ -589,7 +589,7 @@ class CustomerDepositController extends Controller
             }
             else
             {
-                return sendErrorResponse('Deposit request not updated!',422);
+                return sendErrorResponse('Deposit request not updated!',500);
             }
         }
         catch (Exception $e)
@@ -647,7 +647,7 @@ class CustomerDepositController extends Controller
             }
             else
             {
-                return sendErrorResponse('Deposit request not found!',422);
+                return sendErrorResponse('Deposit request not found!',200);
             }
         }
         catch (Exception $e)
@@ -744,7 +744,7 @@ class CustomerDepositController extends Controller
             if(count($requestList)>0){
                 return sendSuccessResponse('Request data found successfully',200,$requestList);
             }else{
-                return sendErrorResponse('Request data not found',422);
+                return sendErrorResponse('Request data not found',200);
             }
         }
         catch (Exception $e)

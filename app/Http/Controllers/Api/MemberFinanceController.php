@@ -140,7 +140,7 @@ class MemberFinanceController extends Controller
             }
             else
             {
-                return sendErrorResponse('Collections not found!', 404);
+                return sendErrorResponse('Collections not found!', 200);
             }
             
         }catch (\Exception $e) {
@@ -168,7 +168,7 @@ class MemberFinanceController extends Controller
             }
             else
             {
-                return sendErrorResponse('Collection details not found!', 404);
+                return sendErrorResponse('Collection details not found!', 200);
             }
             
         }catch (\Exception $e) {
@@ -215,11 +215,11 @@ class MemberFinanceController extends Controller
                 $member->balance = $memberBalance - $request->amount;
                 $member->save();
                 DB::commit();
-                return sendSuccessResponse('Collection details found successfully!', 200, $details);
+                return sendSuccessResponse('Collection details updated successfully!', 200, $details);
             }
             else
             {
-                return sendErrorResponse('Collection details not found!', 404);
+                return sendErrorResponse('Collection details not updated!', 500);
             }
             
         }catch (\Exception $e) {
