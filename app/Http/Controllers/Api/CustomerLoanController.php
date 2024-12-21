@@ -838,7 +838,8 @@ class CustomerLoanController extends Controller
                     'total_paid_loan_amount' => $totalPaidloanAmount,
                     'total_remaining_loan_amount' => $totalRemainingAmount,
                     'total_paid_percentage' => $totalPaidPercentage,
-                    'total_remaining_percentage' => $totalRemainingPercentage
+                    'total_remaining_percentage' => $totalRemainingPercentage,
+                    'total_loan_customers' => count($totalLoanCustomer),
                 ];
             }else{
                 $loanData = [
@@ -1264,7 +1265,9 @@ class CustomerLoanController extends Controller
         $monthlyLoanamount = $this->loanHistoryRepository->getLoanReceivedAmountByloanIds($companyId,$loanIds,null,$firstDate,$lastDate);
 
         $todayDepositamount = $this->depositHistoryRepository->getDepositReceivedAmountByDate($companyId,null,$today);
+        $todayDepositDebitamount = $this->depositHistoryRepository->getDepositReceivedAmountByDate($companyId,null,$today,null,'debit');
         $monthlyDepositamount = $this->depositHistoryRepository->getDepositReceivedAmountByDatewise($companyId,null,$firstDate,$lastDate);
+        $monthlyDepositDebitamount = $this->depositHistoryRepository->getDepositReceivedAmountByDatewise($companyId,null,$firstDate,$lastDate,null,'debit');
 
         //this month start deposit customers
         $recentDepositCustomer = $this->customerDepositRepository->getDepositCustomersIdbyCompany($companyId,$firstDate,$lastDate);
@@ -1294,12 +1297,15 @@ class CustomerLoanController extends Controller
         }
 
         $responseData = [
-            'today_money'           => $todayLoanamount+$todayDepositamount,
-            'month_collection'      => $monthlyLoanamount+$monthlyDepositamount,
-            'total_customer'        => $totalCustomer,
-            'recent_customer'       => $recentCustomer,
-            'today_loan_amount'     => $todayLoanamount,
-            'today_deposit_amount'  => $todayDepositamount,
+            'today_money'                   => $todayLoanamount+($todayDepositamount-$todayDepositDebitamount),
+            'month_collection'              => $monthlyLoanamount+($monthlyDepositamount-$monthlyDepositDebitamount),
+            'total_customer'                => $totalCustomer,
+            'recent_customer'               => $recentCustomer,
+            'today_loan_amount'             => $todayLoanamount,
+            'today_deposit_amount'          => $todayDepositamount,
+            'today_deposit_debit_amount'    => $todayDepositDebitamount,
+            'monthly_deposit_amount'        => $monthlyDepositamount,
+            'monthly_deposit_debit_amount'  => $monthlyDepositDebitamount
         ];
 
         return sendSuccessResponse('Company Dashboard Data.',200, $responseData);

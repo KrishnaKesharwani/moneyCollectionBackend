@@ -53,7 +53,7 @@ class DepositHistoryRepository extends BaseRepository
     }
 
 
-    public function getDepositReceivedAmountByDatewise($companyId, $memberId=null, $fromDate, $toDate,$status=null){
+    public function getDepositReceivedAmountByDatewise($companyId, $memberId=null, $fromDate, $toDate,$status=null,$type='credit'){
         $amount = DB::table('deposit_history')
                     ->join('customer_deposits', 'deposit_history.deposit_id', '=', 'customer_deposits.id')
                     ->where('customer_deposits.company_id', $companyId);
@@ -66,7 +66,7 @@ class DepositHistoryRepository extends BaseRepository
         $amount = $amount
                     ->whereDate('deposit_history.action_date','>=', $fromDate)
                     ->whereDate('deposit_history.action_date','<=', $toDate)
-                    ->where('deposit_history.action_type', 'credit')
+                    ->where('deposit_history.action_type', $type)
                     ->sum('deposit_history.amount');
         return $amount;
     }

@@ -43,7 +43,11 @@ class CustomerLoanRepository extends BaseRepository
                     return $query->where('customer_id', $customerId);
                 })
                 ->when($loanStatus, function ($query, $loanStatus) {
-                    return $query->where('loan_status', $loanStatus);
+                    if($loanStatus == 'all'){
+                        return $query->where('loan_status','!=','pending');
+                    }{
+                        return $query->whereIn('loan_status', $loanStatus);
+                    }
                 })
                 ->when($startDate, function ($query, $startDate) {
                     return $query->whereDate('loan_status_change_date', '>=', $startDate);
