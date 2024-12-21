@@ -45,6 +45,7 @@ class DepositHistoryController extends Controller
             'deposit_id' => 'required|integer|exists:customer_deposits,id',
             'amount' => 'required|numeric|min:1',
             'deposit_type' => 'required|string',
+            'select_date' => 'required',
         ]);
         
         if ($validator->fails()) {
@@ -92,7 +93,7 @@ class DepositHistoryController extends Controller
             return sendErrorResponse('Member balance not enough!', 422);
         }
         
-        $receiveDate    = Carbon::now()->format('Y-m-d H:i:s');
+        $receiveDate    = ($request->select_date)?Carbon::parse($request->select_date)->format('Y-m-d H:i:s'): Carbon::now()->format('Y-m-d H:i:s');
 
         $depositHistory    = $this->depositHistoryRepository->create([
             'deposit_id' => $request->deposit_id,
