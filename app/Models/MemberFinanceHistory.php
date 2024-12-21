@@ -18,6 +18,7 @@ class MemberFinanceHistory extends Model
         'amount',
         'amount_by',
         'amount_by_id',
+        'history_id',
         'customer_id',
         'amount_type',
         'amount_date',

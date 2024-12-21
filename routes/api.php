@@ -88,6 +88,7 @@ Route::middleware('api')->group(function () {
         Route::post('create-customer-deposit', [CustomerDepositController::class, 'store']);
         Route::post('company-customer-deposits', [CustomerDepositController::class, 'index']);
         Route::post('collect-deposit-money', [DepositHistoryController::class, 'store']);
+        Route::post('update-deposit-money', [DepositHistoryController::class, 'update']);
         Route::post('customer-deposit-history', [CustomerDepositController::class, 'depositHistory']);
         Route::post('change-deposit-member', [CustomerDepositController::class, 'changeDepositMember']);
         Route::post('company-deposit-status-graph', [CustomerDepositController::class, 'calculateDepositofLast6Months']);

@@ -58,4 +58,28 @@ class MemberFinanceRepository extends BaseRepository
             ->where('member_finance_history.amount_by', 'advance')
             ->sum('amount');
     }
+
+    public function getMemberFinanceHistoryDetail($depositId)
+    {
+        return DB::table('member_finance')
+            ->join('member_finance_history', 'member_finance.id', '=', 'member_finance_history.member_finance_id')
+            ->join('members', 'members.id', '=', 'member_finance.member_id')
+            ->where('member_finance_history.history_id', $depositId)
+            ->where('member_finance_history.amount_by','deposit')
+            ->where('member_finance.payment_status','working')
+            ->select('member_finance_history.*', 'member_finance.payment_status','member_finance.id as finance_id','member_finance.balance as member_finance_balance','member_finance.member_id','members.balance as member_balance','member_finance.company_id')
+            ->first();
+    }
+
+
+    public function getMemberFinanceBalance($memberId, $companyId)
+    {
+        return $this->model->where('member_id', $memberId)
+            ->join('members', 'members.id', '=', 'member_finance.member_id')
+            ->where('member_finance.company_id', $companyId)
+            ->select('member_finance.*', 'members.balance as member_balance')
+            ->orderBy('member_finance.id', 'desc')
+            ->take(1)
+            ->first();
+    }
 }

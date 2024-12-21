@@ -105,11 +105,19 @@ class DepositHistoryController extends Controller
         
         if($depositHistory)
         {
-
+            $payDate   = Carbon::parse($request->select_date)->format('Y-m-d');
             $checkDate = Carbon::now()->format('Y-m-d');
 
+            //check payDate is not today date
+
+            if($payDate != $checkDate)
+            {
+                $memberFinance = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,$payDate);
+            }else{
+                $memberFinance = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,$checkDate,'working');
+            }
+
             // update member finance
-            $memberFinance = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,$checkDate,'working');
             if($memberFinance)
             {
                 if($request->deposit_type == 'debit')
@@ -138,10 +146,13 @@ class DepositHistoryController extends Controller
                     'previous_balance' => $member->balance
                 ]);
 
-                $memberData = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,null,'working');
-                if($memberData)
+                if($payDate == $checkDate)
                 {
-                    $this->memberFinanceRepository->updateMemberFinance($memberId, $member->company_id,$checkDate);
+                    $memberData = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,null,'working');
+                    if($memberData)
+                    {
+                        $this->memberFinanceRepository->updateMemberFinance($memberId, $member->company_id,$checkDate);
+                    }
                 }
             }
 
@@ -151,6 +162,7 @@ class DepositHistoryController extends Controller
                 'amount' => $request->amount,
                 'amount_by' => 'deposit',
                 'amount_by_id' => $request->deposit_id,
+                'history_id'   => $depositHistory->id,
                 'customer_id' => $deposit->customer_id,
                 'amount_type' => $request->deposit_type,
                 'amount_date' => $receiveDate
@@ -178,6 +190,121 @@ class DepositHistoryController extends Controller
             }
 
             return sendSuccessResponse($message, 201, $depositHistory);
+        }
+        else
+        {
+            return sendErrorResponse('Something went wrong!', 500);
+        }
+    }
+
+
+    public function update(Request $request){
+
+        // Validate the request
+        $validator = Validator::make($request->all(), [
+            'deposit_history_id' => 'required|integer|exists:deposit_history,id',
+            'amount' => 'required|numeric|min:1',
+        ]);
+        
+        if ($validator->fails()) {
+            return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
+        }
+        $depositHistoryId = $request->deposit_history_id;
+        $deposit = $this->depositHistoryRepository->find($depositHistoryId);
+
+        if(!$deposit)
+        {
+            return sendErrorResponse('Deposit history not found!', 404);
+        }
+
+        $amountType = '';
+        $changedAmount = 0;
+
+        if($deposit->action_type == 'credit'){
+            if($request->amount > $deposit->amount)
+            {
+                $amountType = 'add';
+                $changedAmount = $request->amount - $deposit->amount;
+            }
+            else if($request->amount < $deposit->amount)
+            {
+                $amountType = 'substract';
+                $changedAmount = $deposit->amount - $request->amount;
+            }
+        }else if($deposit->action_type == 'debit'){
+            if($request->amount > $deposit->amount)
+            {
+                $amountType = 'Substract';
+                $changedAmount = $request->amount - $deposit->amount;
+            }
+            else if($request->amount < $deposit->amount)
+            {
+                $amountType = 'add';
+                $changedAmount = $deposit->amount - $request->amount;
+            }
+        }
+
+
+
+        elseif($request->amount == $deposit->amount)
+        {
+            return sendErrorResponse('The requested amount is same as the deposit amount already.There is no need to update!', 422);
+        }
+
+        DB::beginTransaction();
+        
+        $depositHistory    = $this->depositHistoryRepository->update($depositHistoryId,[
+            'amount' => $request->amount,
+        ]);
+        
+        if($depositHistory)
+        {
+            // update member finance
+            $memberFinanceHistory = $this->memberFinanceRepository->getMemberFinanceHistoryDetail($depositHistoryId);
+            \Log::info(json_encode($memberFinanceHistory));
+            if($memberFinanceHistory)
+            {
+                                
+                //update member finance history
+                $this->memberFinanceHistoryRepository->update($memberFinanceHistory->id,[
+                    'amount' => $request->amount,
+                ]);
+
+                $memberFinanceBalance = $memberFinanceHistory->member_finance_balance;
+                $memberBalance        = $memberFinanceHistory->member_balance;
+                if($amountType == 'substract')
+                {
+                    $memberFinanceBalance = $memberFinanceBalance - $changedAmount;
+                    $memberBalance        = $memberBalance - $changedAmount;
+                }
+                else if($amountType == 'add')
+                {
+                    $memberFinanceBalance = $memberFinanceBalance + $changedAmount;
+                    $memberBalance        = $memberBalance + $changedAmount;
+                }
+
+                //update member finance balance
+                $this->memberFinanceRepository->update($memberFinanceHistory->finance_id,[
+                    'balance' => $memberFinanceBalance,
+                ]);
+
+                //update Member balance
+                $member = $this->memberRepository->find($memberFinanceHistory->member_id);
+                if($member){
+                    $member->balance = $memberBalance;
+                    $member->save();
+                }
+                DB::commit();
+
+                $message = 'Amount updated successfully!';
+
+                return sendSuccessResponse($message, 201, $depositHistory);
+                
+            }
+            else{
+                return sendErrorResponse('you can not edit this!', 500);
+            }
+            
         }
         else
         {
