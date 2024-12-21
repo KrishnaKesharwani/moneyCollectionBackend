@@ -470,14 +470,16 @@ class MemberController extends Controller
             $lastDate               = Carbon::now()->endOfMonth()->format('Y-m-d');
 
             //get today total collection
-            $todayLoanAmount        = $this->loanHistoryRepository->getLoanReceivedAmountByDate($companyId,$memberId,$today);
-            $todayDepositAmount     = $this->depositHistoryRepository->getDepositReceivedAmountByDate($companyId,$memberId,$today);
-            $todayCollection        = $todayLoanAmount+$todayDepositAmount;
+            $todayLoanAmount                = $this->loanHistoryRepository->getLoanReceivedAmountByDate($companyId,$memberId,$today);
+            $todayDepositAmount             = $this->depositHistoryRepository->getDepositReceivedAmountByDate($companyId,$memberId,$today);
+            $todayDepositDebitAmount        = $this->depositHistoryRepository->getDepositReceivedAmountByDate($companyId,$memberId,$today,null,'debit');
+            $todayCollection                = $todayLoanAmount+($todayDepositAmount-$todayDepositDebitAmount);
 
             //get monthly total collection
-            $monthlyLoanAmount      = $this->loanHistoryRepository->getLoanReceivedAmountByDatewise($companyId,$memberId,$firstDate,$lastDate);
-            $monthlyDepositAmount   = $this->depositHistoryRepository->getDepositReceivedAmountByDatewise($companyId,$memberId,$firstDate,$lastDate);
-            $monthlyCollection      = $monthlyLoanAmount+$monthlyDepositAmount;
+            $monthlyLoanAmount              = $this->loanHistoryRepository->getLoanReceivedAmountByDatewise($companyId,$memberId,$firstDate,$lastDate);
+            $monthlyDepositAmount           = $this->depositHistoryRepository->getDepositReceivedAmountByDatewise($companyId,$memberId,$firstDate,$lastDate);
+            $monthlyDepositDebitAmount      = $this->depositHistoryRepository->getDepositReceivedAmountByDatewise($companyId,$memberId,$firstDate,$lastDate,null,'debit'); //getDepositReceivedAmount
+            $monthlyCollection              = $monthlyLoanAmount+($monthlyDepositAmount-$monthlyDepositDebitAmount);
 
             //get total assigne customer count
 
@@ -504,11 +506,15 @@ class MemberController extends Controller
             $advanceMoney = $this->memberFinanceRepository->getAdvanceMoney($memberId, $companyId,$today);
             $responseData = 
             [
-                'today_collection' => $todayCollection,
-                'monthly_collection' => $monthlyCollection,
-                'assigned_customers' => $totalCustomers,
-                'advance_money' => $advanceMoney,
-                'member_balance' => (float)$member->balance
+                'today_collection'      => $todayCollection,
+                'monthly_collection'    => $monthlyCollection,
+                'assigned_customers'    => $totalCustomers,
+                'advance_money'         => $advanceMoney,
+                'member_balance'        => (float)$member->balance,
+                'today_deposit_credit'  => (float)$todayDepositAmount,
+                'today-deposit-debit'   => (float)$todayDepositDebitAmount,
+                'monthly_deposit_credit'=> (float)$monthlyDepositAmount,
+                'monthly-deposit-debit' => (float)$monthlyDepositDebitAmount
             ];
             
             return sendSuccessResponse('Member dashboard data.',200, $responseData);
