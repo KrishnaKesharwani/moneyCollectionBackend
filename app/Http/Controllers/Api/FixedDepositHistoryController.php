@@ -53,15 +53,22 @@ class FixedDepositHistoryController extends Controller
         
         if($depositHistory)
         {
-            if($request->debit_type == 'money back'){
+            
                 $fixedDeposit = $this->fixedDepositRepository->find($request->fixed_deposit_id);
                 if(!$fixedDeposit)
                 {
                     return sendErrorResponse('Fixed deposit not found!', 404);
                 }
 
-                if($fixedDeposit->deposit_amount >= $request->amount){
+                if($fixedDeposit->deposit_amount >= $request->amount && $request->debit_type == 'money back' ){
                     $fixedDeposit->deposit_amount = $fixedDeposit->deposit_amount - $request->amount;
+                    $fixedDeposit->refund_amount  = $fixedDeposit->refund_amount - $request->amount;
+                    $fixedDeposit->save();
+                    DB::commit();
+                    return sendSuccessResponse('Amount debit successfully!', 201, $depositHistory);
+                }
+                else if($fixedDeposit->refund_amount >= $request->amount && $request->debit_type == 'monthly'){
+                    $fixedDeposit->refund_amount = $fixedDeposit->refund_amount - $request->amount;
                     $fixedDeposit->save();
                     DB::commit();
                     return sendSuccessResponse('Amount debit successfully!', 201, $depositHistory);
@@ -70,10 +77,6 @@ class FixedDepositHistoryController extends Controller
                 {
                     return sendErrorResponse('Money Back amount is greater than deposit amount', 422);
                 }
-            }else{
-                DB::commit();
-                return sendSuccessResponse('Amount debit successfully!', 201, $depositHistory);
-            }
         }
         else
         {

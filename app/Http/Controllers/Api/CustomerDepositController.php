@@ -123,12 +123,16 @@ class CustomerDepositController extends Controller
                     $totalCustomer = array_unique($totalCustomer);
                     $totalCustomerCount = count($totalCustomer);
                 }
+
+                $totalCreditAmountofLastDay = $this->customerDepositRepository->getLastDateTransaction($request->company_id,$member,$customer,'credit');
+                $totalDebitAmountofLastDay  = $this->customerDepositRepository->getLastDateTransaction($request->company_id,$member,$customer,'debit');
+                $todayCollection = $totalCreditAmountofLastDay - $totalDebitAmountofLastDay;
                 $depositData = [
                     'deposits' => $deposits,
                     'total_remaining_amount' => $totalRemaingAmount,
                     'total_cusotomer' => $totalCustomerCount,
                     'total_paid_amount' => $totalPaidAmount,
-                    'last_date_total_credit' => $this->customerDepositRepository->getLastDateTransaction($request->company_id,$member,$customer,'credit'),
+                    'last_date_total_credit' => $todayCollection,
                 ];
 
                 return sendSuccessResponse('Deposits found successfully!', 200, $depositData);
