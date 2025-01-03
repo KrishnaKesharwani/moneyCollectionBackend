@@ -18,7 +18,7 @@ return new class extends Migration
             $table->enum('action_type', ['debit'])->nullable();
             $table->date('action_date')->nullable();
             $table->enum('debit_type', ['monthly', 'money_back'])->default('monthly');
-            $table->foreign('fixed_deposit_id')->references('id')->on('customer_deposits')->onDelete('cascade');
+            $table->foreign('fixed_deposit_id')->references('id')->on('fixed_deposits')->onDelete('cascade');
             $table->timestamps();
         });
     }

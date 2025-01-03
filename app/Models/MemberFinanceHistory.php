@@ -30,6 +30,10 @@ class MemberFinanceHistory extends Model
         'deleted_at'
     ];
 
+    public function member_finance()
+    {
+        return $this->belongsTo(MemberFinance::class, 'member_finance_id', 'id');
+    }
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customer_id', 'id')->select('id','customer_no','name', 'image', 'mobile');

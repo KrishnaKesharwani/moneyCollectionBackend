@@ -33,6 +33,11 @@ class MemberFinance extends Model
     public function member()
     {
         return $this->belongsTo(Member::class)->select('id','member_no','name', 'image');
-    }   
+    }
+
+    public function member_finance_history()
+    {
+        return $this->hasMany(MemberFinanceHistory::class);
+    }
 
 }

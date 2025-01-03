@@ -31,6 +31,7 @@ class CustomerLoanRepository extends BaseRepository
      */
     public function getAllCustomerLoans($company_id, $loanStatus =null, $status = null,$memberId = null,$customerId = null,$startDate = null,$endDate = null)
     {
+    
         $loans = $this->model->with('customer', 'member', 'document', 'loanHistory', 'loanHistory.recieved_member')
                 ->where('company_id', $company_id)
                 ->when($status, function ($query, $status) {
@@ -46,7 +47,7 @@ class CustomerLoanRepository extends BaseRepository
                     if($loanStatus == 'all'){
                         return $query->where('loan_status','!=','pending');
                     }{
-                        return $query->whereIn('loan_status', $loanStatus);
+                        return $query->where('loan_status', $loanStatus);
                     }
                 })
                 ->when($startDate, function ($query, $startDate) {
@@ -57,7 +58,7 @@ class CustomerLoanRepository extends BaseRepository
                 })
                 ->orderBy('id', 'desc')
                 ->get();
-
+        
         return $loans;
     }
 

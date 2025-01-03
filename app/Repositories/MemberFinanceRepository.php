@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\MemberFinance;
+use Hamcrest\Arrays\IsArray;
 use Illuminate\Support\Facades\DB;
 
 class MemberFinanceRepository extends BaseRepository
@@ -14,16 +15,29 @@ class MemberFinanceRepository extends BaseRepository
     
     // You can add any specific methods related to User here
 
-    public function getMemberFinance($memberId, $companyId, $collectDate=null,$paymentStatus = null)
+    public function getMemberFinance($memberId, $companyId, $paidDate=null,$paymentStatus = null)
     {
         return $this->model->where('member_id', $memberId)
             ->where('company_id', $companyId)
-            ->when($collectDate, function ($query, $collectDate) {
-                return $query->whereDate('collect_date', $collectDate);
+            ->when($paidDate, function ($query, $paidDate) {
+                return $query->whereDate('collect_date', $paidDate);
             })
             ->when($paymentStatus, function ($query, $paymentStatus) {
-                return $query->where('payment_status', $paymentStatus);
+                if(is_array($paymentStatus)){
+                    return $query->whereIn('payment_status', $paymentStatus);
+                }else{
+                    return $query->where('payment_status', $paymentStatus);
+                }
+                
             })
+            ->first();
+    }
+
+    public function getLastDateMemberFinance($memberId, $companyId)
+    {
+        return $this->model->where('member_id', $memberId)
+            ->where('company_id', $companyId)
+            ->orderBy('collect_date', 'desc')
             ->first();
     }
     
@@ -39,13 +53,14 @@ class MemberFinanceRepository extends BaseRepository
 
     public function getCollection($companyId, $collectDate=null)
     {
-        return $this->model->with('member')->where('company_id', $companyId)
+        return $this->model->with('member','member_finance_history')->where('company_id', $companyId)
             ->when($collectDate, function ($query, $collectDate) {
                 return $query->whereDate('collect_date', $collectDate);
             })
             ->orderBy('id', 'desc')
             ->get();
     }
+
 
     public function getAdvanceMoney($memberId, $companyId,$date)
     {

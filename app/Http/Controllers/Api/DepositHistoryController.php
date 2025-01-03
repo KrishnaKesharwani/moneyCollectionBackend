@@ -105,17 +105,10 @@ class DepositHistoryController extends Controller
         
         if($depositHistory)
         {
-            $payDate   = Carbon::parse($request->select_date)->format('Y-m-d');
             $checkDate = Carbon::now()->format('Y-m-d');
+            //check paid finance
 
-            //check payDate is not today date
-
-            if($payDate != $checkDate)
-            {
-                $memberFinance = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,$payDate);
-            }else{
-                $memberFinance = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,$checkDate,'working');
-            }
+            $memberFinance = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,$checkDate,'working');
 
             // update member finance
             if($memberFinance)
@@ -138,22 +131,16 @@ class DepositHistoryController extends Controller
                 {
                     $balance = $member->balance + $request->amount;
                 }
+                
+
                 $memberFinance = $this->memberFinanceRepository->create([
                     'member_id' => $memberId,
                     'company_id' => $member->company_id,
-                    'collect_date' => $receiveDate,
+                    'collect_date' => Carbon::now()->format('Y-m-d'),
                     'balance' => $balance,
-                    'previous_balance' => $member->balance
+                    'previous_balance' => $member->balance,
                 ]);
 
-                if($payDate == $checkDate)
-                {
-                    $memberData = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,null,'working');
-                    if($memberData)
-                    {
-                        $this->memberFinanceRepository->updateMemberFinance($memberId, $member->company_id,$checkDate);
-                    }
-                }
             }
 
             //update member finance history

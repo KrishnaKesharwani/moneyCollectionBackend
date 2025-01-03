@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class CustomerDeposit extends Model
 {
@@ -25,11 +26,11 @@ class CustomerDeposit extends Model
         'status_changed_at',
     ];
 
-    protected $hidden = [
-        'created_at',
-        'updated_at',
-        'deleted_at',
-    ];
+    // protected $hidden = [
+    //     'created_at',
+    //     'updated_at',
+    //     'deleted_at',
+    // ];
 
     public function customer()
     {
@@ -44,5 +45,11 @@ class CustomerDeposit extends Model
     public function depositHistory()
     {
         return $this->hasMany(DepositHistory::class, 'deposit_id');
+    }
+
+    public function getCreatedAtAttribute()
+    {
+        //change format to Y-m-d
+        return Carbon::parse($this->attributes['created_at'])->format('Y-m-d'); 
     }
 }

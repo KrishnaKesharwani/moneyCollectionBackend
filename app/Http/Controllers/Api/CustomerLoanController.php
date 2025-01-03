@@ -97,6 +97,7 @@ class CustomerLoanController extends Controller
             else
             {
                 $totalRemaingAmount = 0;
+                $totalPaidAmount = 0;
                 $totalCustomer = [];
 
                 foreach($loans as $loan)
@@ -118,10 +119,10 @@ class CustomerLoanController extends Controller
                     $loan->total_paid = $paidAmount;
                     $remaingAmount = $loan->loan_amount - $paidAmount;
                     $loan->remaining_amount = $remaingAmount;
-                    //if($loan->loan_status == 'paid'){
-                        $totalRemaingAmount = $totalRemaingAmount + $remaingAmount;
-                        $totalCustomer[] = $loan->customer_id;
-                    //}
+                    $totalRemaingAmount = $totalRemaingAmount + $remaingAmount;
+                    $totalPaidAmount = $totalPaidAmount + $paidAmount;
+                    $totalCustomer[] = $loan->customer_id;
+
 
                     $loan->paid_today = 'no';
                     $loanMaxDate = $this->loanHistoryRepository->getMaxLoanHistoryDate($loan->id);
@@ -144,6 +145,7 @@ class CustomerLoanController extends Controller
                 $loanData = [
                     'loans' => $loans,
                     'total_remaining_amount' => $totalRemaingAmount,
+                    'total_paid_amount' => $totalPaidAmount,
                     'total_cusotomer' => $totalCustomerCount 
                 ];
                 return sendSuccessResponse('Loans found successfully!', 200, $loanData);
@@ -227,7 +229,7 @@ class CustomerLoanController extends Controller
             $validatedData['loan_status_changed_by']    = auth()->user()->id;
             $validatedData['loan_status_change_date']   = Carbon::now()->format('Y-m-d H:i:s');
             $validatedData['status']                    = $request->status ?? 'active';
-            $validatedData['assigned_member_id']        = $request->assigned_member_id ?? 0;
+            $validatedData['assigned_member_id']        = (isset($request->assigned_member_id) && $request->assigned_member_id !== 'null') ? $request->assigned_member_id : 0;
 
             // Store the company data in the database
             $customerLoan = $this->customerLoanRepository->create($validatedData);

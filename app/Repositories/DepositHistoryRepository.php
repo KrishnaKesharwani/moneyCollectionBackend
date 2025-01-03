@@ -90,7 +90,7 @@ class DepositHistoryRepository extends BaseRepository
                 ->join('customer_deposits', 'deposit_history.deposit_id', '=', 'customer_deposits.id')
                 ->join('customers', 'customer_deposits.customer_id', '=', 'customers.id')
                 ->where('deposit_history.receiver_member_id', $memberId)
-                ->whereDate('action_date', carbon::today())
+                ->whereDate('deposit_history.created_at', carbon::today())
                 ->get();
         return $data;
     }

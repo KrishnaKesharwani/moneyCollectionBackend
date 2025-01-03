@@ -120,7 +120,7 @@ class MemberFinanceController extends Controller
 
         try
         {
-            $filterDate = null;
+            $filterDate = Carbon::now()->format('Y-m-d');
             if($request->date && $request->date != 'null')
             {
                 $date           = preg_replace('/\s*\(.*\)$/', '', $request->date);
@@ -128,15 +128,44 @@ class MemberFinanceController extends Controller
             }
 
             $collections = $this->memberFinanceRepository->getCollection($request->company_id,$filterDate);
+            \Log::info($collections);
 
-            if($collections)
+            if(!$collections->isEmpty())
             {
+                $total_deposit_debit = 0;
+                $total_deposit_credit = 0;
+                $total_loan_credit = 0;
+
                 foreach ($collections as $key => $value) {
                     $memberFinanceId = $value->id;
                     $customerCount = $this->memberFinanceHistoryRepository->getCustomerCount($memberFinanceId);
                     $value->customer_count = $customerCount;
+
+                    if($value->member_finance_history){
+                        foreach ($value->member_finance_history as $mkey => $mvalue) {
+                            if($mvalue->amount_by=='deposit' && $mvalue->amount_type=='debit'){
+                                $total_deposit_debit = $total_deposit_debit + $mvalue->amount;
+                            }else if($mvalue->amount_by=='deposit' && $mvalue->amount_type=='credit'){
+                                $total_deposit_credit = $total_deposit_credit + $mvalue->amount;
+                            }else if($mvalue->amount_by=='loan' && $mvalue->amount_type=='credit'){
+                                $total_loan_credit = $total_loan_credit + $mvalue->amount;
+                            }
+                        }
+                    }
                 }
-                return sendSuccessResponse('Collections found successfully!', 200, $collections);
+
+                //unset the member_finance_history from collections
+                foreach ($collections as $key => $value) {
+                    unset($value->member_finance_history);
+                }
+                
+                $responseData = [
+                    'total_deposit_debit' => $total_deposit_debit,
+                    'total_deposit_credit' => $total_deposit_credit,
+                    'total_loan_credit' => $total_loan_credit,
+                    'collections' => $collections
+                ];
+                return sendSuccessResponse('Collections found successfully!', 200, $responseData);
             }
             else
             {

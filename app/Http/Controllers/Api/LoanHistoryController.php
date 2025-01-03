@@ -129,11 +129,11 @@ class LoanHistoryController extends Controller
                     'previous_balance' => $member->balance,
                 ]);
                 
-                $memberData = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,null,'working');
-                if($memberData)
-                {
-                    $this->memberFinanceRepository->updateMemberFinance($memberId, $member->company_id,$checkDate);
-                }
+                // $memberData = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,null,'working');
+                // if($memberData)
+                // {
+                //     $this->memberFinanceRepository->updateMemberFinance($memberId, $member->company_id,$checkDate);
+                // }
             }
 
             //update member finance history

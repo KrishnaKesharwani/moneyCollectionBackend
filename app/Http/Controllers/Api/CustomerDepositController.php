@@ -90,7 +90,7 @@ class CustomerDepositController extends Controller
                 $totalRemaingAmount = 0;
                 $totalCustomer = [];
                 $totalPaidAmount = 0;
-                
+                $totalRecievedAmount = 0;
                 foreach($deposits as $deposit)
                 {
                     $paidAmount             = $this->depositHistoryRepository->getTotalDepositAmount($deposit->id,'credit');
@@ -103,6 +103,7 @@ class CustomerDepositController extends Controller
                     if($deposit->status == 'active'){
                         $totalRemaingAmount = $totalRemaingAmount + $remaingAmount;
                         $totalPaidAmount    = $totalPaidAmount + $paidAmount;
+                        $totalRecievedAmount = $totalRecievedAmount + $recievedAmount;
                         $totalCustomer[]    = $deposit->customer_id;
                     }
                     
@@ -131,7 +132,7 @@ class CustomerDepositController extends Controller
                     'deposits' => $deposits,
                     'total_remaining_amount' => $totalRemaingAmount,
                     'total_cusotomer' => $totalCustomerCount,
-                    'total_paid_amount' => $totalPaidAmount,
+                    'total_paid_amount' => $totalPaidAmount-$totalRecievedAmount,
                     'last_date_total_credit' => $todayCollection,
                 ];
 
@@ -231,36 +232,38 @@ class CustomerDepositController extends Controller
                 $fromDate = null;
             }
             
-            $collection = $this->customerDepositRepository->getdepositHistory($request->customer_id,$request->deposit_id,$fromDate);
-            if($collection->isEmpty())
-            {
+            $collection = $this->customerDepositRepository->getdepositHistory($request->customer_id, $request->deposit_id, $fromDate);
+
+            if ($collection->isEmpty()) {
                 return sendErrorResponse('Collection not found!', 404);
-            }
-            else
-            {
+            } else {
                 $balance = 0;
-                $totalbalance = 0;
-                foreach ($collection as $key => $value) {
-                    
+
+                // Sort the collection by `created_at` in ascending order before calculating the balance
+                $sortedCollection = $collection->sortBy('created_at')->values();
+
+                foreach ($sortedCollection as $key => $value) {
                     if ($value->action_type == 'credit') {
                         $balance += $value->amount;
-                    }
-                    // If action_type is 'debit', subtract the amount from the balance
-                    elseif ($value->action_type == 'debit') {
+                    } elseif ($value->action_type == 'debit') {
                         $balance -= $value->amount;
                     }
-                    $collection[$key]->balance = $balance;
-                    $totalbalance = $balance;
+
+                    // Set the running balance for this transaction
+                    $sortedCollection[$key]->balance = $balance;
                 }
 
-                $sortedCollection = $collection->sortByDesc('created_at')->values();
-                $responseData = 
-                [
-                    'collection' => $sortedCollection,
-                    'total_balance' => $totalbalance
+                // Sort the collection by `created_at` in descending order for the final output
+                $responseCollection = $sortedCollection->sortByDesc('created_at')->values();
+
+                $responseData = [
+                    'collection' => $responseCollection,
+                    'total_balance' => $balance,
                 ];
+
                 return sendSuccessResponse('Collection found successfully!', 200, $responseData);
             }
+
         }
         catch (\Exception $e) {
             return sendErrorResponse($e->getMessage(), 500);
@@ -616,7 +619,7 @@ class CustomerDepositController extends Controller
         try{
             $companyId  = $request->company_id;
             $customerId = $request->customer_id ?? null;
-            $requestDate = $request->request_date ?? null;
+            $requestDate = $request->request_date ?? Carbon::now()->format('Y-m-d');
 
             if(isset($request->request_date) && ($request->request_date != ''  && $request->request_date != null))
             {
@@ -630,7 +633,7 @@ class CustomerDepositController extends Controller
             }
 
             $depositRequestList = $this->depositRequestRepository->depositRequestList($companyId,$customerId,$status,$requestDate);
-            if($depositRequestList)
+            if(!$depositRequestList->isEmpty())
             {
                 foreach ($depositRequestList as $key => $value) {
                        $user = $this->userRepository->find($value->requested_by);
