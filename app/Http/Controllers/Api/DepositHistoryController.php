@@ -108,7 +108,7 @@ class DepositHistoryController extends Controller
             $checkDate = Carbon::now()->format('Y-m-d');
             //check paid finance
 
-            $memberFinance = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,$checkDate,'working');
+            $memberFinance = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,null,'working');
 
             // update member finance
             if($memberFinance)

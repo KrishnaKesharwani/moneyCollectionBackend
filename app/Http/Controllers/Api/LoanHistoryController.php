@@ -113,7 +113,7 @@ class LoanHistoryController extends Controller
             // update member finance
             $checkDate = Carbon::now()->format('Y-m-d');
             //$checkDate    = '2024-10-26';
-            $memberFinance = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,$checkDate,'working');
+            $memberFinance = $this->memberFinanceRepository->getMemberFinance($memberId,$member->company_id,null,'working');
             if($memberFinance)
             {
                 $memberFinance->balance = $memberFinance->balance + $request->amount;

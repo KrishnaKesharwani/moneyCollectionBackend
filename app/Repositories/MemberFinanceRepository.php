@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\MemberFinance;
 use Hamcrest\Arrays\IsArray;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class MemberFinanceRepository extends BaseRepository
 {
@@ -55,7 +56,7 @@ class MemberFinanceRepository extends BaseRepository
     {
         return $this->model->with('member','member_finance_history')->where('company_id', $companyId)
             ->when($collectDate, function ($query, $collectDate) {
-                return $query->whereDate('collect_date', $collectDate);
+                return $query->whereDate('created_at', $collectDate);
             })
             ->orderBy('id', 'desc')
             ->get();
@@ -96,5 +97,13 @@ class MemberFinanceRepository extends BaseRepository
             ->orderBy('member_finance.id', 'desc')
             ->take(1)
             ->first();
+    }
+
+    public function getWorkingMemberBalance($companyId){
+        return $this->model->where('payment_status', 'working')->where('company_id', $companyId)->sum('balance');
+    }
+
+    public function getPaidMemberBalance($companyId){
+        return $this->model->where('payment_status', 'paid')->whereDate('paid_date', Carbon::now()->format('Y-m-d'))->where('company_id', $companyId)->sum('paid_amount');
     }
 }

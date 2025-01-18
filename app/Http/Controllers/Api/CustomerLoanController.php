@@ -881,9 +881,11 @@ class CustomerLoanController extends Controller
                 $searchDate = '';
                 if($i == 0) $searchDate = $currentDate;
                 else $searchDate        = Carbon::now()->subDays($i)->format('Y-m-d');
+                $filterdate = $searchDate;
                 $loanReceivedAmount     = $this->loanHistoryRepository->getLoanReceivedAmountByDate($request->company_id,$request->member_id,$searchDate);
-                $depositReceivedAmount  = $this->depositHistoryRepository->getDepositReceivedAmountByDate($request->company_id,$request->member_id,$searchDate);
-                $totalReceivedAmount    = $loanReceivedAmount + $depositReceivedAmount;
+                $depositcreditAmount    = $this->depositHistoryRepository->getDepositReceivedAmountByDate($request->company_id,$request->member_id,$searchDate,null,'credit');
+                $depositdebitAmount     = $this->depositHistoryRepository->getDepositReceivedAmountByDate($request->company_id,$request->member_id,$searchDate,null,'debit');
+                $totalReceivedAmount    = $loanReceivedAmount + ($depositcreditAmount - $depositdebitAmount);
                 //format search date in Y-m-d
                 $searchDate = Carbon::parse($searchDate)->format('d M');
                 $data[$i] = [
@@ -1312,5 +1314,19 @@ class CustomerLoanController extends Controller
 
         return sendSuccessResponse('Company Dashboard Data.',200, $responseData);
         
+    }
+
+    public function deleteLoanDocument($id){
+        $document = $this->loanDocumentRepository->find($id);
+        if($document->document_url != null){
+            if(Storage::exists($document->document_url)){
+                Storage::delete($document->document_url);
+            }
+        }
+        if($document->delete()){
+            return sendSuccessResponse('Loan Document Deleted.',200);
+        }else{
+            return sendErrorResponse('Loan Document Not Deleted.',500);
+        }
     }
 }

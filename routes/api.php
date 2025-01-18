@@ -84,6 +84,8 @@ Route::middleware('api')->group(function () {
         Route::post('loan-status-graph', [CustomerLoanController::class, 'dashboardLoanStatus']);
         Route::post('member-received-amount-line-graph', [CustomerLoanController::class, 'calculateReceivedAmountForMemberLineGraph']);
         Route::post('customer-loan-status-graph', [CustomerLoanController::class, 'customerLoanStatusGraph']);
+        //delete loan document
+        Route::delete('delete-loan-document/{id}', [CustomerLoanController::class, 'deleteLoanDocument']);
         //customerdeposit
         Route::post('create-customer-deposit', [CustomerDepositController::class, 'store']);
         Route::post('company-customer-deposits', [CustomerDepositController::class, 'index']);

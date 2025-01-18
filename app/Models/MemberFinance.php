@@ -23,6 +23,7 @@ class MemberFinance extends Model
         'remaining_amount',
         'previous_balance',
         'details',
+        'paid_date'
     ];
 
     protected $hidden = [

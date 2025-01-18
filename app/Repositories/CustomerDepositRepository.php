@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\CustomerDeposit;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 class CustomerDepositRepository extends BaseRepository
 {
     public function __construct(CustomerDeposit $customerDeposit)
@@ -74,33 +75,33 @@ class CustomerDepositRepository extends BaseRepository
     //get total credit amount by a member of last date
     public function getLastDateTransaction($companyId, $memberId, $customer, $depositType)
     {
-        $latestTransactions = DB::table('deposit_history')
-            ->select('deposit_id', DB::raw('MAX(action_date) as latest_date'))
-            ->where('action_type', $depositType)
-            ->groupBy('deposit_id');
+        $latestTransaction = DB::table('deposit_history as dh1')
+            ->where('dh1.action_type', $depositType)
+            ->orderByDesc('dh1.created_at')
+            ->first();
 
-        $amount = DB::table('customer_deposits')
-            ->where('customer_deposits.company_id', $companyId)
-            ->when($memberId, function ($query, $memberId) {
-                return $query->where('customer_deposits.assigned_member_id', $memberId);
-            })
-            ->when($customer, function ($query, $customer) {
-                return $query->where('customer_deposits.customer_id', $customer);
-            })
-            ->join('deposit_history', function ($join) use ($depositType) {
-                $join->on('customer_deposits.id', '=', 'deposit_history.deposit_id')
-                    ->where('deposit_history.action_type', '=', $depositType);
-            })
-            ->joinSub($latestTransactions, 'latest_transactions', function ($join) {
-                $join->on('deposit_history.deposit_id', '=', 'latest_transactions.deposit_id')
-                    ->on('deposit_history.action_date', '=', 'latest_transactions.latest_date');
-            })
-            ->sum('deposit_history.amount');
+        $amount = 0;
+
+        if (!empty($latestTransaction)) {
+            $latestDate = Carbon::parse($latestTransaction->created_at)->format('Y-m-d'); // Convert to Y-m-d format
+            
+            $amount = DB::table('customer_deposits as cd')
+                ->where('cd.company_id', $companyId)
+                ->when($memberId, function ($query, $memberId) {
+                    return $query->where('cd.assigned_member_id', $memberId);
+                })
+                ->when($customer, function ($query, $customer) {
+                    return $query->where('cd.customer_id', $customer);
+                })
+                ->join('deposit_history as dh', 'cd.id', '=', 'dh.deposit_id')
+                ->where('dh.action_type', '=', $depositType)
+                ->whereDate('dh.created_at', '=', $latestDate) // Compare both dates in Y-m-d format
+                ->sum('dh.amount');
+        }
 
         return (float)$amount;
     }
-
-
+    
     public function getdepositHistory($customerId,$depositId,$fromDate){
         $history = DB::table('customer_deposits')
             ->select('deposit_history.*')
@@ -108,9 +109,9 @@ class CustomerDepositRepository extends BaseRepository
             ->where('customer_deposits.customer_id', $customerId)
             ->where('deposit_history.deposit_id', $depositId)
             ->when($fromDate, function ($query, $fromDate) {
-                return $query->whereDate('action_date','>=', $fromDate);
+                return $query->whereDate('deposit_history.created_at','>=', $fromDate);
             })            
-            ->orderBy('deposit_history.action_date', 'asc');
+            ->orderBy('deposit_history.created_at', 'desc');
             if($fromDate){
                 $history = $history->get();
             }else{

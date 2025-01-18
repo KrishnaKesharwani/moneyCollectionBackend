@@ -124,7 +124,6 @@ class CustomerDepositController extends Controller
                     $totalCustomer = array_unique($totalCustomer);
                     $totalCustomerCount = count($totalCustomer);
                 }
-
                 $totalCreditAmountofLastDay = $this->customerDepositRepository->getLastDateTransaction($request->company_id,$member,$customer,'credit');
                 $totalDebitAmountofLastDay  = $this->customerDepositRepository->getLastDateTransaction($request->company_id,$member,$customer,'debit');
                 $todayCollection = $totalCreditAmountofLastDay - $totalDebitAmountofLastDay;
@@ -134,6 +133,8 @@ class CustomerDepositController extends Controller
                     'total_cusotomer' => $totalCustomerCount,
                     'total_paid_amount' => $totalPaidAmount-$totalRecievedAmount,
                     'last_date_total_credit' => $todayCollection,
+                    'lastday_credit' => $totalCreditAmountofLastDay,
+                    'lastday_debit' => $totalDebitAmountofLastDay
                 ];
 
                 return sendSuccessResponse('Deposits found successfully!', 200, $depositData);
@@ -322,75 +323,81 @@ class CustomerDepositController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function calculateDepositofLast6Months(Request $request){
-
+    public function calculateDepositofLast6Months(Request $request)
+    {
         $inputData = [
             'company_id' => 'required|exists:companies,id',
         ];
 
         $validator = Validator::make($request->all(), $inputData);
-        
 
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
-        try{
-            //current month
-            $month  = carbon::now()->month;
-            //current year
-            $year   = carbon::now()->year;
+        try {
+            // Current month and year
+            $currentMonth = Carbon::now()->month;
+            $currentYear = Carbon::now()->year;
+
             $customerId = $request->customer_id ?? null;
-            $activeDeposits = $this->customerDepositRepository->getAllActiveDeposits($request->company_id,$customerId)->pluck('id');
-            $transDepositIds = [];
+            $activeDeposits = $this->customerDepositRepository
+                ->getAllActiveDeposits($request->company_id, $customerId)
+                ->pluck('id');
 
-            if(count($activeDeposits) > 0)
-            {
-
+            if (count($activeDeposits) > 0) {
                 $data = [];
-                for($i = 0; $i < 6; $i++)
-                {
+                $transDepositIds = [];
 
-                    $startDate = Carbon::createFromDate($year, $month-$i, 1)->format('Y-m-d');
-                    //current month end date
-                    $endDate = Carbon::createFromDate($year, $month-$i, 1)->endOfMonth()->format('Y-m-d');
-                    //get month name from start date
-                    $monthName = Carbon::createFromDate($year, $month-$i, 1)->format('M');
+                for ($i = 0; $i < 6; $i++) {
+                    $calculatedMonth = $currentMonth - $i;
+                    $calculatedYear = $currentYear;
 
-                    $depositAmount      = $this->depositHistoryRepository->getDepositAmountByDate($activeDeposits,'credit',$startDate,$endDate);
-                    $withdrawAmount     = $this->depositHistoryRepository->getDepositAmountByDate($activeDeposits,'debit',$startDate,$endDate);
-                    $transDepositIds[]  = $this->depositHistoryRepository->getDepositIdByDate($activeDeposits,$startDate,$endDate);
+                    // Adjust year and month if month is less than 1
+                    if ($calculatedMonth < 1) {
+                        $calculatedYear--;
+                        $calculatedMonth += 12;
+                    }
+
+                    // Start and end dates for the month
+                    $startDate = Carbon::createFromDate($calculatedYear, $calculatedMonth, 1)->startOfMonth()->format('Y-m-d');
+                    $endDate = Carbon::createFromDate($calculatedYear, $calculatedMonth, 1)->endOfMonth()->format('Y-m-d');
+                    $monthName = Carbon::createFromDate($calculatedYear, $calculatedMonth, 1)->format('M');
+
+                    $depositAmount = $this->depositHistoryRepository->getDepositAmountByDate($activeDeposits, 'credit', $startDate, $endDate);
+                    $withdrawAmount = $this->depositHistoryRepository->getDepositAmountByDate($activeDeposits, 'debit', $startDate, $endDate);
+                    $transDepositIds[] = $this->depositHistoryRepository->getDepositIdByDate($activeDeposits, $startDate, $endDate);
+
                     $data[$i] = [
                         'month' => $monthName,
                         'deposit_amount' => (float)$depositAmount,
                         'withdraw_amount' => (float)$withdrawAmount,
+                        'remaining_amount' => (float)($depositAmount - $withdrawAmount),
                         'start_date' => $startDate,
-                        'end_date' => $endDate
+                        'end_date' => $endDate,
                     ];
                 }
-                
 
                 $mergedArray = array_unique(array_merge(...$transDepositIds));
                 $totalCustomer = 0;
-                if(count($mergedArray) > 0)
-                {
+
+                if (count($mergedArray) > 0) {
                     $totalCustomer = $this->customerDepositRepository->getTotalCustomerByDepositIds($mergedArray);
                 }
-                $response = [   
+
+                $response = [
                     'graphdata' => $data,
-                    'total_customer' => (int)$totalCustomer
+                    'total_customer' => (int)$totalCustomer,
                 ];
                 return sendSuccessResponse('Deposits found successfully!', 200, $response);
-            }
-            else
-            {
+            } else {
                 return sendErrorResponse('Deposits not found!', 200);
             }
-        }
-        catch (\Exception $e) {
-            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        } catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage() . ' on line ' . $e->getLine(), 500);
         }
     }
+
 
     /**
      * Update loan status by given loan id

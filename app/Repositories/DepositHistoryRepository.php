@@ -19,15 +19,15 @@ class DepositHistoryRepository extends BaseRepository
     }
 
     public function getDepositIdByDate($depositId,$fromDate,$toDate){
-        return $this->model->whereIn('deposit_id', $depositId)->whereDate('action_date','>=', $fromDate)->whereDate('action_date','<=', $toDate)->pluck('deposit_id')->toArray();
+        return $this->model->whereIn('deposit_id', $depositId)->whereDate('created_at','>=', $fromDate)->whereDate('created_at','<=', $toDate)->pluck('deposit_id')->toArray();
     }
 
     public function getDepositAmountByDate($depositId, $type,$fromDate,$toDate){
-        return $this->model->whereIn('deposit_id', $depositId)->where('action_type', $type)->whereDate('action_date','>=', $fromDate)->whereDate('action_date','<=', $toDate)->sum('amount');
+        return $this->model->whereIn('deposit_id', $depositId)->where('action_type', $type)->whereDate('created_at','>=', $fromDate)->whereDate('created_at','<=', $toDate)->sum('amount');
     }
 
     public function getMaxDepositHistoryDate($depositId){
-        $maxDate = $this->model->where('deposit_id', $depositId)->where('action_type', 'credit')->max('action_date');
+        $maxDate = $this->model->where('deposit_id', $depositId)->where('action_type', 'credit')->max('created_at');
         if($maxDate)
             return $maxDate;
         else
@@ -45,7 +45,7 @@ class DepositHistoryRepository extends BaseRepository
             $amount = $amount->where('deposit_history.receiver_member_id', $memberId);
         }
         if($date!=null){
-            $amount = $amount->whereDate('deposit_history.action_date', $date);
+            $amount = $amount->whereDate('deposit_history.created_at', $date);
         }
         $amount = $amount->where('deposit_history.action_type', $type)
                     ->sum('deposit_history.amount');
@@ -64,8 +64,8 @@ class DepositHistoryRepository extends BaseRepository
             $amount = $amount->where('deposit_history.receiver_member_id', $memberId);
         }
         $amount = $amount
-                    ->whereDate('deposit_history.action_date','>=', $fromDate)
-                    ->whereDate('deposit_history.action_date','<=', $toDate)
+                    ->whereDate('deposit_history.created_at','>=', $fromDate)
+                    ->whereDate('deposit_history.created_at','<=', $toDate)
                     ->where('deposit_history.action_type', $type)
                     ->sum('deposit_history.amount');
         return $amount;
@@ -104,7 +104,7 @@ class DepositHistoryRepository extends BaseRepository
                 ->when($memberId, function ($query, $memberId) {
                     $query->where('deposit_history.receiver_member_id', $memberId);
                 })
-                ->whereDate('deposit_history.action_date', $today)
+                ->whereDate('deposit_history.created_at', $today)
                 ->distinct('customer_deposits.customer_id')
                 ->pluck('customer_deposits.customer_id')->toArray();
         return $data;

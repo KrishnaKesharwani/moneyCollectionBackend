@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Repositories\LoanHistoryRepository;
 use App\Repositories\MemberRepository;
 use App\Repositories\CustomerLoanRepository;
+use App\Repositories\CustomerDepositRepository;
 use App\Repositories\MemberFinanceHistoryRepository;
 use App\Repositories\MemberFinanceRepository;    
 use Illuminate\Support\Facades\Validator;
@@ -22,13 +23,15 @@ class MemberFinanceController extends Controller
     protected $customerLoanRepository;
     protected $memberFinanceHistoryRepository;
     protected $memberFinanceRepository;
+    protected $customerDepositRepository;
 
     public function __construct(
         LoanHistoryRepository $loanHistoryRepository,
         MemberRepository $memberRepository,
         CustomerLoanRepository $customerLoanRepository,
         MemberFinanceHistoryRepository $memberFinanceHistoryRepository,
-        MemberFinanceRepository $memberFinanceRepository
+        MemberFinanceRepository $memberFinanceRepository,
+        CustomerDepositRepository $customerDepositRepository
         )
     {
         $this->loanHistoryRepository = $loanHistoryRepository;
@@ -36,6 +39,7 @@ class MemberFinanceController extends Controller
         $this->customerLoanRepository = $customerLoanRepository;
         $this->memberFinanceHistoryRepository = $memberFinanceHistoryRepository;
         $this->memberFinanceRepository = $memberFinanceRepository;
+        $this->customerDepositRepository = $customerDepositRepository;
     }
 
 
@@ -138,8 +142,25 @@ class MemberFinanceController extends Controller
 
                 foreach ($collections as $key => $value) {
                     $memberFinanceId = $value->id;
+                    $memberId = $value->member->id;
                     $customerCount = $this->memberFinanceHistoryRepository->getCustomerCount($memberFinanceId);
+
+                    $totalDepositCustomer   = $this->customerDepositRepository->getDepositCustomersIdbyCompany($request->company_id,null,null,$memberId);
+                    //total loan customers
+                    $totalLoanCustomer      = $this->customerLoanRepository->getLoanCustomersIdbyCompany($request->company_id,null,null,$memberId);
+
+                    $totalCustomer = 0;
+                    if(count($totalDepositCustomer)>0 && count($totalLoanCustomer)>0){
+                        $totalCustomer = count(array_unique(array_merge($totalDepositCustomer,$totalLoanCustomer)));
+                    }else if(count($totalDepositCustomer)>0){
+                        $totalCustomer = count($totalDepositCustomer);
+                    }else if(count($totalLoanCustomer)>0){
+                        $totalCustomer = count($totalLoanCustomer);
+                    }
+                    
                     $value->customer_count = $customerCount;
+                    $value->total_customer_count = $totalCustomer;
+                    $value->remaining_customer = $totalCustomer - $customerCount;
 
                     if($value->member_finance_history){
                         foreach ($value->member_finance_history as $mkey => $mvalue) {
@@ -159,10 +180,16 @@ class MemberFinanceController extends Controller
                     unset($value->member_finance_history);
                 }
                 
+                $today_paid_amount = $this->memberFinanceRepository->getPaidMemberBalance($request->company_id);
+                $today_remaining_amount = $this->memberFinanceRepository->getWorkingMemberBalance($request->company_id);
+
+                
                 $responseData = [
                     'total_deposit_debit' => $total_deposit_debit,
                     'total_deposit_credit' => $total_deposit_credit,
                     'total_loan_credit' => $total_loan_credit,
+                    'total_member_pending' => (float)$today_remaining_amount,
+                    'total_member_received' => (float)$today_paid_amount,
                     'collections' => $collections
                 ];
                 return sendSuccessResponse('Collections found successfully!', 200, $responseData);
@@ -231,7 +258,8 @@ class MemberFinanceController extends Controller
                 'payment_status' => 'paid',
                 'balance' => $remainingAmount,
                 'remaining_amount' => $remainingAmount,
-                'details' => $request->details
+                'details' => $request->details,
+                'paid_date' => Carbon::now()->format('Y-m-d H:i:s')
             ];
 
             $details = $this->memberFinanceRepository->update($request->collection_id,$updateData);
