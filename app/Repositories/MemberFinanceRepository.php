@@ -54,12 +54,17 @@ class MemberFinanceRepository extends BaseRepository
 
     public function getCollection($companyId, $collectDate=null)
     {
-        return $this->model->with('member','member_finance_history')->where('company_id', $companyId)
-            ->when($collectDate, function ($query, $collectDate) {
-                return $query->whereDate('created_at', $collectDate);
+        return $this->model->with('member', 'member_finance_history')
+            ->where('company_id', $companyId)
+            ->where(function ($query) use ($collectDate) {
+                $query->whereDate('created_at', $collectDate) // Records for the specified date
+                    ->orWhere(function ($subQuery) {
+                        $subQuery->where('payment_status', 'working'); // Only if payment_status is "working"
+                    });
             })
             ->orderBy('id', 'desc')
             ->get();
+
     }
 
 

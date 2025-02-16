@@ -131,8 +131,14 @@ class MemberFinanceController extends Controller
                 $filterDate     = Carbon::parse($date)->format('Y-m-d');    
             }
 
+            //echo $filterDate;
             $collections = $this->memberFinanceRepository->getCollection($request->company_id,$filterDate);
-            \Log::info($collections);
+
+            // echo '<pre>';
+            // print_r($collections);
+            // echo '</pre>';
+            // exit();
+            // \Log::info($collections);
 
             if(!$collections->isEmpty())
             {
