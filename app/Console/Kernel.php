@@ -17,6 +17,7 @@ class Kernel extends ConsoleKernel
         $schedule->call(function () {
             $controller = new ExportController();
             $controller->deleteExportFiles();
+            $controller->downloadBackup();
         })->dailyAt('00:00'); // Runs daily at midnight
 
         //for set cron job

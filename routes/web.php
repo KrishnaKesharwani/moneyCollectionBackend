@@ -19,6 +19,7 @@ Route::get('/', function () {
 });
 
 Route::get('/delete-export-files', [ScheduleController::class, 'deleteExportFiles']);
+Route::get('/download-backup', [ScheduleController::class, 'downloadBackup']);
 
 Route::get('/clear-cache', function () {
     // Run the optimize:clear command
