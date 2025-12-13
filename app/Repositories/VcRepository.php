@@ -2,27 +2,27 @@
 
 namespace App\Repositories;
 
-use App\Models\Member;
+use App\Models\Vc;
 
-class MemberRepository extends BaseRepository
+class VcRepository extends BaseRepository
 {
-    public function __construct(Member $member) 
+    public function __construct(Vc $vc)
     {
-        parent::__construct($member); 
+        parent::__construct($vc);
     }
     
     // You can add any specific methods related to User here
 
-    public function getById($member_id)
+    public function getById($vc_id)
     {
-        return $this->model->with('user')->where('id', $member_id)->first();
+        return $this->model->with('user')->where('id', $vc_id)->first();
     }
 
-    public function getMemberByUserId($userId){
+    public function getvcByUserId($userId){
         return $this->model->where('user_id', $userId)->first();
     }
 
-    public function getAllMembers($company_id, $status = null)
+    public function getAllvcs($company_id, $status = null)
     {
         return $this->model->with('user')
                 ->where('company_id', $company_id)
@@ -34,11 +34,11 @@ class MemberRepository extends BaseRepository
     }
 
 
-    public function checkMemberExist($company_id, $member_id){
-        return $this->model->where('company_id', $company_id)->where('id', $member_id)->first();
+    public function checkvcExist($company_id, $vc_id){
+        return $this->model->where('company_id', $company_id)->where('id', $vc_id)->first();
     }
 
-    public function getMembersCount($company_id, $status = null){
+    public function getvcsCount($company_id, $status = null){
         return $this->model->where('company_id', $company_id)
                 ->when($status, function ($query, $status) {
                     return $query->where('status', $status);

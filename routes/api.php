@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CompanyPlanController;
 use App\Http\Controllers\Api\CompanyPlanHistoryController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\MemberController;
+use App\Http\Controllers\Api\VcController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerLoanController;
 use App\Http\Controllers\Api\CustomerDepositController;
@@ -31,6 +32,9 @@ use App\Http\Controllers\Api\ReportController;
 */
 // Login Route
 
+Route::get('/login', function () {
+    return response()->json(['message' => 'Login route not available for API'], 404);
+})->name('login');
 
 Route::middleware('api')->group(function () {
     Route::post('login', [LoginController::class, 'login']);
@@ -52,6 +56,13 @@ Route::middleware('api')->group(function () {
         Route::post('members', [MemberController::class, 'index']);
         Route::put('updatememberstatus', [MemberController::class, 'updateMemberStatus']);
         Route::get('member-dashboard',[MemberController::class,'memberDashboard']);
+
+        //VC
+        Route::post('createvc', [VcController::class, 'store']);
+        Route::post('updatevc', [VcController::class, 'update']);
+        Route::post('vcs', [VcController::class, 'index']);
+        Route::put('updatevcstatus', [VcController::class, 'updatevcStatus']);
+      
 
         //memberFinance
         Route::post('pay-advance-to-member', [MemberFinanceController::class, 'store']);

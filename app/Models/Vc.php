@@ -5,23 +5,24 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Member extends Model
+class Vc extends Model
 {
     use HasFactory;
 
-    protected $table = 'members'; 
+    protected $table = 'vcs';
 
     protected $fillable = [
-        'user_id',
         'company_id',
-        'member_no',
-        'name',
-        'mobile',
-        'email',
-        'join_date',
-        'aadhar_no',
-        'image',
-        'address',
+        'vc_name',
+        'type',
+        'total_month',
+        'total_member',
+        'final_amount',
+        'start_date',
+        'end_date',
+        'vc_image',
+        'instalment_amount',
+        'details',
         'status',
     ];
 
