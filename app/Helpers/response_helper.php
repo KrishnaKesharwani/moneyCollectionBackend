@@ -41,7 +41,7 @@ if (!function_exists('sendErrorResponse')) {
      * @param int $code
      * @return \Illuminate\Http\JsonResponse
      */
-    function sendErrorResponse($message, $code = 400, $error = null, $data = null)
+    function sendErrorResponse($message, $code = 400, $error = null)
     {
         $response = [
             'success' => false,
@@ -50,10 +50,6 @@ if (!function_exists('sendErrorResponse')) {
 
         if ($error) {
             $response['error'] = $error;
-        }
-
-        if ($data) {
-            $response['data'] = $data;
         }
 
         return response()->json($response, $code);

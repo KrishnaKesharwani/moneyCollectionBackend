@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Api;
+
 use App\Http\Controllers\Controller;
 
 use Illuminate\Support\Facades\Storage;
@@ -54,8 +55,7 @@ class CustomerLoanController extends Controller
         ReportBackupRepository $reportBackupRepository,
         CompanyRepository $companyRepository,
         CustomerDepositRepository $customerDepositRepository
-        )
-    {
+    ) {
         $this->customerRepository                   = $customerRepository;
         $this->customerLoanRepository               = $customerLoanRepository;
         $this->loanStatusHistoryRepository          = $loanStatusHistoryRepository;
@@ -69,49 +69,45 @@ class CustomerLoanController extends Controller
         $this->customerDepositRepository            = $customerDepositRepository;
     }
 
-    public function index(Request $request){
+    public function index(Request $request)
+    {
 
         $inputData = [
             'company_id' => 'required|exists:companies,id',
         ];
 
-    
+
 
         $validator = Validator::make($request->all(), $inputData);
-        
+
 
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
-        try{
+        try {
             $status = $request->status ?? 'active';
             $loanStatus = $request->loan_status ?? null;
             $member = $request->member_id ?? null;
             $customer = $request->customer_id ?? null;
-            $loans = $this->customerLoanRepository->getAllCustomerLoans($request->company_id,$loanStatus,$status,$member,$customer);
-            if($loans->isEmpty())
-            {
+            $loans = $this->customerLoanRepository->getAllCustomerLoans($request->company_id, $loanStatus, $status, $member, $customer);
+            if ($loans->isEmpty()) {
                 return sendErrorResponse('Loans not found!', 200);
-            }
-            else
-            {
+            } else {
                 $totalRemaingAmount = 0;
                 $totalPaidAmount = 0;
                 $totalCustomer = [];
 
-                foreach($loans as $loan)
-                {
+                foreach ($loans as $loan) {
                     $paidAmount = $this->loanHistoryRepository->getTotalPaidAmount($loan->id);
                     $loan->applied_user_name = '';
-                    if($loan->apply_date!=null){
-                        if($loan->applied_user_type==3){
+                    if ($loan->apply_date != null) {
+                        if ($loan->applied_user_type == 3) {
                             $loan->applied_user_name = 'self';
                         }
-                        if($loan->applied_user_type==2){
+                        if ($loan->applied_user_type == 2) {
                             $member = $this->memberRepository->getMemberByUserId($loan->applied_by);
-                            if($member)
-                            {
+                            if ($member) {
                                 $loan->applied_user_name = $member->name;
                             }
                         }
@@ -126,19 +122,17 @@ class CustomerLoanController extends Controller
 
                     $loan->paid_today = 'no';
                     $loanMaxDate = $this->loanHistoryRepository->getMaxLoanHistoryDate($loan->id);
-                    if($loanMaxDate)
-                    {
+                    if ($loanMaxDate) {
                         //convert loan max date to carbon Y-m-d format
                         $loanMaxDate = Carbon::parse($loanMaxDate)->format('Y-m-d');
-                        if($loanMaxDate == Carbon::now()->format('Y-m-d'))
-                        {
+                        if ($loanMaxDate == Carbon::now()->format('Y-m-d')) {
                             $loan->paid_today = 'yes';
                         }
                     }
                 }
 
                 $totalCustomerCount = 0;
-                if(!empty($totalCustomer)){
+                if (!empty($totalCustomer)) {
                     $totalCustomer = array_unique($totalCustomer);
                     $totalCustomerCount = count($totalCustomer);
                 }
@@ -146,56 +140,52 @@ class CustomerLoanController extends Controller
                     'loans' => $loans,
                     'total_remaining_amount' => $totalRemaingAmount,
                     'total_paid_amount' => $totalPaidAmount,
-                    'total_cusotomer' => $totalCustomerCount 
+                    'total_cusotomer' => $totalCustomerCount
                 ];
                 return sendSuccessResponse('Loans found successfully!', 200, $loanData);
             }
-        }
-        catch (\Exception $e) {
-            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        } catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage() . ' on line ' . $e->getLine(), 500);
         }
     }
 
-    public function unassignedLoans(Request $request){
+    public function unassignedLoans(Request $request)
+    {
 
         $inputData = [
             'company_id' => 'required|exists:companies,id',
         ];
 
         $validator = Validator::make($request->all(), $inputData);
-        
+
 
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
-        try{
-            $loanStatus = $request->loan_status ?? ['paid','approved'];
-            $loans = $this->customerLoanRepository->getAllmemberNotAssignedLoans($request->company_id,$loanStatus);
-            if($loans->isEmpty())
-            {
+        try {
+            $loanStatus = $request->loan_status ?? ['paid', 'approved'];
+            $loans = $this->customerLoanRepository->getAllmemberNotAssignedLoans($request->company_id, $loanStatus);
+            if ($loans->isEmpty()) {
                 return sendErrorResponse('Loans not found!', 200);
-            }
-            else
-            {
+            } else {
                 $loanData = [
                     'loans' => $loans,
                 ];
                 return sendSuccessResponse('Loans found successfully!', 200, $loanData);
             }
-        }
-        catch (\Exception $e) {
-            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        } catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage() . ' on line ' . $e->getLine(), 500);
         }
     }
 
     public function store(Request $request)
     {
         // Validate the request
-
+        
         $validator = Validator::make($request->all(), [
             'company_id' => 'required|integer|exists:companies,id',
-            'customer_id '  => 'required1|integer|exists:customers,id',
+            'customer_id'  => 'required1|integer|exists:customers,id',
             'loan_amount' => 'required|numeric',
             'installment_amount'  => 'required|numeric',
             'start_date' => 'required',
@@ -204,17 +194,15 @@ class CustomerLoanController extends Controller
             'loan_status' => 'required|string',
         ]);
         
-
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
         $validatedData = $request->all();
-        
+
         try {
             $customer = $this->customerRepository->getById($request->customer_id);
-            if(empty($customer))
-            {
+            if (empty($customer)) {
                 return sendErrorResponse('Customer not found!', 404);
             }
             $loanCount = $customer->loan_count;
@@ -222,7 +210,7 @@ class CustomerLoanController extends Controller
 
             $cleanStartDate                             = preg_replace('/\s*\(.*\)$/', '', $request->start_date);
             $cleanEndDate                               = preg_replace('/\s*\(.*\)$/', '', $request->end_date);
-            $validatedData['loan_no']                   = 'Loan-'.$customer->id.'-'.$loanCount+1;
+            $validatedData['loan_no']                   = 'Loan-' . $customer->id . '-' . $loanCount + 1;
             $validatedData['start_date']                = Carbon::parse($cleanStartDate)->format('Y-m-d');
             $validatedData['end_date']                  = Carbon::parse($cleanEndDate)->format('Y-m-d');
             $validatedData['created_by']                = auth()->user()->id;
@@ -235,14 +223,13 @@ class CustomerLoanController extends Controller
             $customerLoan = $this->customerLoanRepository->create($validatedData);
 
             // Check if the company was successfully created
-            if ($customerLoan)
-            {   
+            if ($customerLoan) {
                 //\Log::info($request->document);
-                if($request->document){
+                if ($request->document) {
                     $loanDocument = json_decode($request->document);
-                    if(count($loanDocument)>0){
+                   // if (count($loanDocument) > 0) {
                         foreach ($loanDocument as $document) {
-                            if($document!=''){
+                            if ($document != '') {
                                 $savedDocURL = $this->storeBase64Image($document, 'loandocument');
                                 $documentData = [
                                     'loan_id' => $customerLoan->id,
@@ -251,7 +238,7 @@ class CustomerLoanController extends Controller
                                 $documentHistory = $this->loanDocumentRepository->create($documentData);
                             }
                         }
-                    }
+                  //  }
                 }
                 $statusData = [
                     'loan_id' => $customerLoan->id,
@@ -263,7 +250,7 @@ class CustomerLoanController extends Controller
 
                 $statusHistory = $this->loanStatusHistoryRepository->create($statusData);
 
-                if($request->assigned_member_id){
+                if ($request->assigned_member_id) {
                     $memberData = [
                         'loan_id' => $customerLoan->id,
                         'member_id' => $request->assigned_member_id,
@@ -275,21 +262,18 @@ class CustomerLoanController extends Controller
                 }
 
                 //update the customer loan count
-                $customer->loan_count = $customer->loan_count+1;
+                $customer->loan_count = $customer->loan_count + 1;
                 $customer->save();
 
                 DB::commit();
 
                 $loanData = $this->customerLoanRepository->getLoanById($customerLoan->id);
                 return sendSuccessResponse('Loan provided successfully!', 201, $loanData);
-            }
-            else
-            {
+            } else {
                 return sendErrorResponse('Loan not provided!', 500);
             }
-        }
-        catch (Exception $e) {
-            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        } catch (Exception $e) {
+            return sendErrorResponse($e->getMessage() . ' on line ' . $e->getLine(), 500);
         }
     }
 
@@ -321,9 +305,9 @@ class CustomerLoanController extends Controller
 
         // Store the image in the public storage folder (or any custom directory)
         $path = Storage::put("public/{$directory}/{$fileName}", $imageData);
-        
+
         // Return the stored path or URL to save in the database
-        return $directory.'/'.$fileName;
+        return $directory . '/' . $fileName;
     }
 
     public function loanRequest(Request $request)
@@ -335,40 +319,36 @@ class CustomerLoanController extends Controller
             'customer_id '  => 'required1|integer|exists:customers,id',
             'loan_amount' => 'required|numeric',
         ]);
-        
+
 
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
         $validatedData = $request->all();
-        
+
         try {
             DB::beginTransaction();
-            $validatedData['details']                   = $request->details ?? null;    
+            $validatedData['details']                   = $request->details ?? null;
             $validatedData['applied_by']                = auth()->user()->id;
             $validatedData['applied_user_type']         = auth()->user()->user_type;
             $validatedData['apply_date']                = Carbon::now()->format('Y-m-d');
             $validatedData['status']                    = 'active';
-            $validatedData['loan_status']               = 'pending';    
+            $validatedData['loan_status']               = 'pending';
 
             // Store the company data in the database
             $customerLoan = $this->customerLoanRepository->create($validatedData);
 
             // Check if the company was successfully created
-            if ($customerLoan)
-            {   
+            if ($customerLoan) {
                 DB::commit();
 
                 $loanData = $this->customerLoanRepository->getLoanById($customerLoan->id);
                 return sendSuccessResponse('Applied successfully!', 201, $loanData);
-            }
-            else
-            {
+            } else {
                 return sendErrorResponse('Something is wrong!', 500);
             }
-        }
-        catch (Exception $e) {
+        } catch (Exception $e) {
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
@@ -385,14 +365,14 @@ class CustomerLoanController extends Controller
             'no_of_days' => 'required|integer',
             'loan_status' => 'required|string',
         ]);
-        
+
 
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
         $validatedData = $request->all();
-        
+
         try {
             $customerLoan   = $this->customerLoanRepository->find($request->loan_id);
             $customer       = $this->customerRepository->find($customerLoan->customer_id);
@@ -401,7 +381,7 @@ class CustomerLoanController extends Controller
 
             $cleanStartDate                             = preg_replace('/\s*\(.*\)$/', '', $request->start_date);
             $cleanEndDate                               = preg_replace('/\s*\(.*\)$/', '', $request->end_date);
-            $validatedData['loan_no']                   = 'Loan-'.$customer->id.'-'.$loanCount+1;
+            $validatedData['loan_no']                   = 'Loan-' . $customer->id . '-' . $loanCount + 1;
             $validatedData['start_date']                = Carbon::parse($cleanStartDate)->format('Y-m-d');
             $validatedData['end_date']                  = Carbon::parse($cleanEndDate)->format('Y-m-d');
             $validatedData['created_by']                = auth()->user()->id;
@@ -411,17 +391,16 @@ class CustomerLoanController extends Controller
             $validatedData['assigned_member_id']        = $request->assigned_member_id ?? 0;
 
             // Store the company data in the database
-            $customerLoan = $this->customerLoanRepository->update($request->loan_id,$validatedData);
+            $customerLoan = $this->customerLoanRepository->update($request->loan_id, $validatedData);
 
             // Check if the company was successfully created
-            if ($customerLoan)
-            {   
+            if ($customerLoan) {
 
-                if($request->document){
+                if ($request->document) {
                     $loanDocument = json_decode($request->document);
-                    if(count($loanDocument)>0){
+                    if (count($loanDocument) > 0) {
                         foreach ($loanDocument as $document) {
-                            if($document!=''){
+                            if ($document != '') {
                                 $savedDocURL = $this->storeBase64Image($document, 'loandocument');
                                 $documentData = [
                                     'loan_id' => $customerLoan->id,
@@ -443,7 +422,7 @@ class CustomerLoanController extends Controller
 
                 $statusHistory = $this->loanStatusHistoryRepository->create($statusData);
 
-                if($request->assigned_member_id){
+                if ($request->assigned_member_id) {
                     $memberData = [
                         'loan_id' => $customerLoan->id,
                         'member_id' => $request->assigned_member_id,
@@ -455,20 +434,17 @@ class CustomerLoanController extends Controller
                 }
 
                 //update the customer loan count
-                $customer->loan_count = $customer->loan_count+1;
+                $customer->loan_count = $customer->loan_count + 1;
                 $customer->save();
 
                 DB::commit();
 
                 $loanData = $this->customerLoanRepository->getLoanById($customerLoan->id);
                 return sendSuccessResponse('Loan provided successfully!', 201, $loanData);
-            }
-            else
-            {
+            } else {
                 return sendErrorResponse('Loan not provided!', 500);
             }
-        }
-        catch (Exception $e) {
+        } catch (Exception $e) {
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
@@ -479,86 +455,78 @@ class CustomerLoanController extends Controller
             'customer_id' => 'required|integer|exists:customers,id',
             'loan_id' => 'required|integer|exists:customer_loans,id',
         ]);
-        
+
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
 
-        try{
+        try {
 
             $fromDay = $request->from_day ?? null;
             //get the previous date by the day count 
-            if($fromDay){
+            if ($fromDay) {
                 $fromDate = Carbon::now()->subDays($fromDay)->format('Y-m-d');
-            }else{
+            } else {
                 $fromDate = null;
             }
             $loan       = $this->customerLoanRepository->getLoanById($request->loan_id);
 
             $loanAmount = 0;
-            if(!$loan)
-            {
+            if (!$loan) {
                 return sendErrorResponse('Loan not found!', 200);
-            }
-            else{
+            } else {
                 $loanAmount = $loan->loan_amount;
             }
 
-            $collection = $this->customerLoanRepository->getLoanHistory($request->customer_id,$request->loan_id,$fromDate);
-            if($collection->isEmpty())
-            {
+            $collection = $this->customerLoanRepository->getLoanHistory($request->customer_id, $request->loan_id, $fromDate);
+            if ($collection->isEmpty()) {
                 return sendErrorResponse('Collection not found!', 200);
-            }
-            else
-            {
+            } else {
                 $remainingAmount = $loanAmount;  // Initialize the remaining amount with the total loan amount
                 $i = 1;
                 foreach ($collection as $key => $value) {
                     // Deduct the installment amount from the remaining amount
-                    $remainingAmount -= $collection[$key]->amount; 
+                    $remainingAmount -= $collection[$key]->amount;
                     // Set the remaining amount for each collection entry
                     $collection[$key]->balance = $remainingAmount;
                     $i++;
-                }                
+                }
                 // Sort the collection by 'created_at' in descending order using sortByDesc
                 $sortedCollection = $collection->sortByDesc('created_at')->values();
-                $responseData = 
-                [
-                    'collection' => $sortedCollection,
-                    'remaining_amount' => $remainingAmount
-                ];
+                $responseData =
+                    [
+                        'collection' => $sortedCollection,
+                        'remaining_amount' => $remainingAmount
+                    ];
                 return sendSuccessResponse('Collection found successfully!', 200, $responseData);
             }
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
-    
+
     public function changeLoanMember(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'loan_id' => 'required|integer|exists:customer_loans,id',
             'member_id' => 'required|integer|exists:members,id',
         ]);
-        
+
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
-        }    
+        }
 
-        try{            
+        try {
             $customerLoan   = $this->customerLoanRepository->find($request->loan_id);
-            if($customerLoan->assigned_member_id == $request->member_id)
-            {
+            if ($customerLoan->assigned_member_id == $request->member_id) {
                 // this loan member already asigned
                 return sendErrorResponse('Loan member already assigned!', 409);
             }
             DB::beginTransaction();
             $customerLoan->assigned_member_id = $request->member_id;
             $customerLoan->member_changed_reason = $request->reason ?? null;
-            if($customerLoan->save())
-            {
+            if ($customerLoan->save()) {
                 $memberData = [
                     'loan_id' => $customerLoan->id,
                     'member_id' => $request->member_id,
@@ -569,13 +537,10 @@ class CustomerLoanController extends Controller
                 $memberHistory = $this->loanMemberHistoryRepository->create($memberData);
                 DB::commit();
                 return sendSuccessResponse('Loan member changed successfully!', 200);
-            }
-            else
-            {   
+            } else {
                 return sendErrorResponse('Loan member not changed!', 500);
             }
-        }
-        catch (Exception $e) {
+        } catch (Exception $e) {
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
@@ -587,37 +552,29 @@ class CustomerLoanController extends Controller
             'loan_id' => 'required|integer|exists:customer_loans,id',
             'member_id' => 'required|integer|exists:members,id',
         ]);
-        
-        if ($validator->fails())
-        {
+
+        if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
 
-        try{            
+        try {
             $customerLoan   = $this->customerLoanRepository->find($request->loan_id);
-            if($customerLoan->assigned_member_id == $request->member_id)
-            {
+            if ($customerLoan->assigned_member_id == $request->member_id) {
                 DB::beginTransaction();
                 $customerLoan->assigned_member_id = 0;
-                if($customerLoan->save())
-                {
+                if ($customerLoan->save()) {
                     //delete member from loan member history
                     $this->loanMemberHistoryRepository->deleteMember(['loan_id' => $request->loan_id, 'member_id' => $request->member_id]);
                     DB::commit();
                     return sendSuccessResponse('Loan member removed successfully!', 200);
-                }
-                else
-                {   
+                } else {
                     return sendErrorResponse('Loan member not removed!', 500);
                 }
-            }
-            else
-            {
+            } else {
                 return sendErrorResponse('This member not assigned to this loan!', 404);
             }
-        }
-        catch (Exception $e) {
+        } catch (Exception $e) {
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
@@ -629,19 +586,20 @@ class CustomerLoanController extends Controller
      * @param Request $request
      * @return JsonResponse
      */
-    public function updateLoanStatus(Request $request){
+    public function updateLoanStatus(Request $request)
+    {
 
         $validator = Validator::make($request->all(), [
             'loan_id' => 'required|integer|exists:customer_loans,id',
             'loan_status' => 'required',
         ]);
-        
+
 
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
-        try{
+        try {
             DB::beginTransaction();
             //update user status
             $loanId = $request->loan_id;
@@ -651,10 +609,9 @@ class CustomerLoanController extends Controller
                 'loan_status_changed_by' => auth()->user()->id,
                 'loan_status_change_date' => Carbon::now()->format('Y-m-d H:i:s'),
             ];
-            $loan = $this->customerLoanRepository->update($loanId,$updateLoanData);
+            $loan = $this->customerLoanRepository->update($loanId, $updateLoanData);
 
-            if($loan)
-            {
+            if ($loan) {
                 $statusData = [
                     'loan_id' => $loanId,
                     'loan_status' => $request->loan_status,
@@ -667,35 +624,32 @@ class CustomerLoanController extends Controller
 
                 DB::commit();
                 $loanData = $this->customerLoanRepository->find($loanId);
-                return sendSuccessResponse('Loan status updated successfully!',200,$loanData);
+                return sendSuccessResponse('Loan status updated successfully!', 200, $loanData);
+            } else {
+                return sendErrorResponse('Loan status not updated', 500);
             }
-            else
-            {
-                return sendErrorResponse('Loan status not updated',500);
-            }
-        }
-        catch (Exception $e)
-        {
+        } catch (Exception $e) {
             return sendErrorResponse($e->getMessage(), 500);
         }
     }
 
-    public function LoanListByStatus(Request $request){
+    public function LoanListByStatus(Request $request)
+    {
 
         $inputData = [
             'company_id' => 'required|exists:companies,id',
         ];
 
-    
+
 
         $validator = Validator::make($request->all(), $inputData);
-        
+
 
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
-        try{
+        try {
             $status = $request->status ?? 'active';
             $loanStatus = $request->loan_status ?? 'completed';
             $member = $request->member_id ?? null;
@@ -707,28 +661,23 @@ class CustomerLoanController extends Controller
             //get the date of the first day and last day according to this month and year
             $startDate = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
             $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth()->format('Y-m-d');
-            $loans = $this->customerLoanRepository->getAllCustomerLoans($request->company_id,$loanStatus,$status,$member,$customer,$startDate,$endDate);
-            if($loans->isEmpty())
-            {
+            $loans = $this->customerLoanRepository->getAllCustomerLoans($request->company_id, $loanStatus, $status, $member, $customer, $startDate, $endDate);
+            if ($loans->isEmpty()) {
                 return sendErrorResponse('Loans not found!', 200);
-            }
-            else
-            {
+            } else {
                 $totalRemaingAmount = 0;
                 $totalCustomer = [];
 
-                foreach($loans as $loan)
-                {
+                foreach ($loans as $loan) {
                     $paidAmount = $this->loanHistoryRepository->getTotalPaidAmount($loan->id);
                     $loan->applied_user_name = '';
-                    if($loan->apply_date!=null){
-                        if($loan->applied_user_type==3){
+                    if ($loan->apply_date != null) {
+                        if ($loan->applied_user_type == 3) {
                             $loan->applied_user_name = 'self';
                         }
-                        if($loan->applied_user_type==2){
+                        if ($loan->applied_user_type == 2) {
                             $member = $this->memberRepository->getMemberByUserId($loan->applied_by);
-                            if($member)
-                            {
+                            if ($member) {
                                 $loan->applied_user_name = $member->name;
                             }
                         }
@@ -737,102 +686,100 @@ class CustomerLoanController extends Controller
                     $remaingAmount = $loan->loan_amount - $paidAmount;
                     $loan->remaining_amount = $remaingAmount;
                     //if($loan->loan_status == 'paid'){
-                        $totalRemaingAmount = $totalRemaingAmount + $remaingAmount;
-                        $totalCustomer[] = $loan->customer_id;
+                    $totalRemaingAmount = $totalRemaingAmount + $remaingAmount;
+                    $totalCustomer[] = $loan->customer_id;
                     //}
 
                     $loan->paid_today = 'no';
                     $loanMaxDate = $this->loanHistoryRepository->getMaxLoanHistoryDate($loan->id);
-                    if($loanMaxDate)
-                    {
+                    if ($loanMaxDate) {
                         //convert loan max date to carbon Y-m-d format
                         $loanMaxDate = Carbon::parse($loanMaxDate)->format('Y-m-d');
-                        if($loanMaxDate == Carbon::now()->format('Y-m-d'))
-                        {
+                        if ($loanMaxDate == Carbon::now()->format('Y-m-d')) {
                             $loan->paid_today = 'yes';
                         }
                     }
                 }
 
                 $totalCustomerCount = 0;
-                if(!empty($totalCustomer)){
+                if (!empty($totalCustomer)) {
                     $totalCustomer = array_unique($totalCustomer);
                     $totalCustomerCount = count($totalCustomer);
                 }
                 $loanData = [
                     'loans' => $loans,
                     'total_remaining_amount' => $totalRemaingAmount,
-                    'total_cusotomer' => $totalCustomerCount 
+                    'total_cusotomer' => $totalCustomerCount
                 ];
                 return sendSuccessResponse('Loans found successfully!', 200, $loanData);
             }
-        }
-        catch (\Exception $e) {
-            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        } catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage() . ' on line ' . $e->getLine(), 500);
         }
     }
 
-    public function dashboardLoanStatus(Request $request){
+    public function dashboardLoanStatus(Request $request)
+    {
 
         $inputData = [
             'company_id' => 'required|exists:companies,id',
         ];
 
         $validator = Validator::make($request->all(), $inputData);
-        
+
 
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
-        try{
+        try {
             $memberId           = $request->member_id ?? null;
             $companyId          = $request->company_id;
             $today              = Carbon::now()->format('Y-m-d');
             //total deposit customers
-            $totalDepositCustomer   = $this->customerDepositRepository->getDepositCustomersIdbyCompany($companyId,null,null,$memberId);
+            $totalDepositCustomer   = $this->customerDepositRepository->getDepositCustomersIdbyCompany($companyId, null, null, $memberId);
             //total loan customers
-            $totalLoanCustomer      = $this->customerLoanRepository->getLoanCustomersIdbyCompany($companyId,null,null,$memberId);
+            $totalLoanCustomer      = $this->customerLoanRepository->getLoanCustomersIdbyCompany($companyId, null, null, $memberId);
 
-            $todayLoanCustomer      = $this->loanHistoryRepository->getAttendedCustomerIds($companyId,$memberId,$today);
+            $todayLoanCustomer      = $this->loanHistoryRepository->getAttendedCustomerIds($companyId, $memberId, $today);
 
-            $todayDepositCusotmer   = $this->depositHistoryRepository->getAttendedDepositCustomers($companyId,$memberId,$today);
+            $todayDepositCusotmer   = $this->depositHistoryRepository->getAttendedDepositCustomers($companyId, $memberId, $today);
 
 
             $totalCustomer = 0;
-            if(count($totalDepositCustomer)>0 && count($totalLoanCustomer)>0){
-                $totalCustomer = count(array_unique(array_merge($totalDepositCustomer,$totalLoanCustomer)));
-            }else if(count($totalDepositCustomer)>0){
+            if (count($totalDepositCustomer) > 0 && count($totalLoanCustomer) > 0) {
+                $totalCustomer = count(array_unique(array_merge($totalDepositCustomer, $totalLoanCustomer)));
+            } else if (count($totalDepositCustomer) > 0) {
                 $totalCustomer = count($totalDepositCustomer);
-            }else if(count($totalLoanCustomer)>0){
+            } else if (count($totalLoanCustomer) > 0) {
                 $totalCustomer = count($totalLoanCustomer);
             }
 
             $attendedCustomers = 0;
-            if(count($todayLoanCustomer)>0 && count($todayDepositCusotmer)>0){
-                $attendedCustomers = count(array_unique(array_merge($todayLoanCustomer,$todayDepositCusotmer)));
-            }else if(count($todayLoanCustomer)>0){
+            if (count($todayLoanCustomer) > 0 && count($todayDepositCusotmer) > 0) {
+                $attendedCustomers = count(array_unique(array_merge($todayLoanCustomer, $todayDepositCusotmer)));
+            } else if (count($todayLoanCustomer) > 0) {
                 $attendedCustomers = count($todayLoanCustomer);
-            }else if(count($todayDepositCusotmer)>0){
+            } else if (count($todayDepositCusotmer) > 0) {
                 $attendedCustomers = count($todayDepositCusotmer);
             }
 
             $remainingCustomer = $totalCustomer - $attendedCustomers;
 
-            if($memberId==null){
+            if ($memberId == null) {
                 $totalLoanAmount = $this->customerLoanRepository->getTotalLoanAmount($companyId);
                 $totalPaidloanAmount = $this->loanHistoryRepository->getTotalPaidLoanAmount($companyId);
 
                 $totalPaidPercentage = 0;
-                if($totalLoanAmount>0){
-                    $totalPaidPercentage = round(($totalPaidloanAmount/$totalLoanAmount)*100);
+                if ($totalLoanAmount > 0) {
+                    $totalPaidPercentage = round(($totalPaidloanAmount / $totalLoanAmount) * 100);
                 }
 
                 $totalRemainingAmount = $totalLoanAmount - $totalPaidloanAmount;
 
                 $totalRemainingPercentage = 0;
-                if($totalLoanAmount>0){
-                    $totalRemainingPercentage = round(($totalRemainingAmount/$totalLoanAmount)*100);
+                if ($totalLoanAmount > 0) {
+                    $totalRemainingPercentage = round(($totalRemainingAmount / $totalLoanAmount) * 100);
                 }
 
                 $loanData = [
@@ -843,22 +790,21 @@ class CustomerLoanController extends Controller
                     'total_remaining_percentage' => $totalRemainingPercentage,
                     'total_loan_customers' => count($totalLoanCustomer),
                 ];
-            }else{
+            } else {
                 $loanData = [
                     'attended_customers' => $attendedCustomers,
                     'total_customers' => $totalCustomer,
-                    'remaining_customers' => $remainingCustomer 
+                    'remaining_customers' => $remainingCustomer
                 ];
             }
             return sendSuccessResponse('Loans found successfully!', 200, $loanData);
-        
-        }
-        catch (\Exception $e) {
-            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        } catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage() . ' on line ' . $e->getLine(), 500);
         }
     }
 
-    public function calculateReceivedAmountForMemberLineGraph(Request $request){
+    public function calculateReceivedAmountForMemberLineGraph(Request $request)
+    {
 
         $inputData = [
             'company_id' => 'required|exists:companies,id',
@@ -866,25 +812,24 @@ class CustomerLoanController extends Controller
         ];
 
         $validator = Validator::make($request->all(), $inputData);
-        
+
 
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
-        try{
+        try {
             //current date
             $currentDate = Carbon::now()->format('Y-m-d');
             $data = [];
-            for($i = 0; $i < 10; $i++)
-            {
+            for ($i = 0; $i < 10; $i++) {
                 $searchDate = '';
-                if($i == 0) $searchDate = $currentDate;
+                if ($i == 0) $searchDate = $currentDate;
                 else $searchDate        = Carbon::now()->subDays($i)->format('Y-m-d');
                 $filterdate = $searchDate;
-                $loanReceivedAmount     = $this->loanHistoryRepository->getLoanReceivedAmountByDate($request->company_id,$request->member_id,$searchDate);
-                $depositcreditAmount    = $this->depositHistoryRepository->getDepositReceivedAmountByDate($request->company_id,$request->member_id,$searchDate,null,'credit');
-                $depositdebitAmount     = $this->depositHistoryRepository->getDepositReceivedAmountByDate($request->company_id,$request->member_id,$searchDate,null,'debit');
+                $loanReceivedAmount     = $this->loanHistoryRepository->getLoanReceivedAmountByDate($request->company_id, $request->member_id, $searchDate);
+                $depositcreditAmount    = $this->depositHistoryRepository->getDepositReceivedAmountByDate($request->company_id, $request->member_id, $searchDate, null, 'credit');
+                $depositdebitAmount     = $this->depositHistoryRepository->getDepositReceivedAmountByDate($request->company_id, $request->member_id, $searchDate, null, 'debit');
                 $totalReceivedAmount    = $loanReceivedAmount + ($depositcreditAmount - $depositdebitAmount);
                 //format search date in Y-m-d
                 $searchDate = Carbon::parse($searchDate)->format('d M');
@@ -893,74 +838,68 @@ class CustomerLoanController extends Controller
                     'received_amount' => $totalReceivedAmount,
                 ];
             }
-            
+
             return sendSuccessResponse('Last 10 days received amount found successfully!', 200, $data);
-        }
-        catch (\Exception $e) {
-            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        } catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage() . ' on line ' . $e->getLine(), 500);
         }
     }
 
 
-    public function customerLoanStatusGraph(Request $request){
+    public function customerLoanStatusGraph(Request $request)
+    {
 
         $inputData = [
             'company_id' => 'required|exists:companies,id',
             'customer_id' => 'required|exists:customers,id',
         ];
 
-    
+
 
         $validator = Validator::make($request->all(), $inputData);
-        
+
 
         if ($validator->fails()) {
             return sendErrorResponse('Validation errors occurred.', 422, $validator->errors());
         }
 
-        try{
+        try {
             $status = $request->status ?? 'active';
             $loanStatus = $request->loan_status ?? 'paid';
             $customer = $request->customer_id ?? null;
-            $loans = $this->customerLoanRepository->getAllCustomerLoansStatus($request->company_id,$loanStatus,$status,$customer);
-            if($loans->isEmpty())
-            {
+            $loans = $this->customerLoanRepository->getAllCustomerLoansStatus($request->company_id, $loanStatus, $status, $customer);
+            if ($loans->isEmpty()) {
                 return sendErrorResponse('Loans not found!', 200);
-            }
-            else
-            {
+            } else {
                 $totalRemaingAmount = 0;
                 $totalCustomer = [];
 
-                foreach($loans as $loan)
-                {
+                foreach ($loans as $loan) {
                     $paidAmount = $this->loanHistoryRepository->getTotalPaidAmount($loan->id);
                     $loan->loan_amount = (float)$loan->loan_amount;
                     $loan->total_paid = (float)$paidAmount;
                     $remaingAmount = $loan->loan_amount - $paidAmount;
                     $loan->remaining_amount = (float)$remaingAmount;
-                    $loan->paidPercentage = round(($paidAmount/$loan->loan_amount)*100,2);
-                    $loan->remainingPercentage = round(($remaingAmount/$loan->loan_amount)*100,2);
+                    $loan->paidPercentage = round(($paidAmount / $loan->loan_amount) * 100, 2);
+                    $loan->remainingPercentage = round(($remaingAmount / $loan->loan_amount) * 100, 2);
                     $totalRemaingAmount = $totalRemaingAmount + $remaingAmount;
                     $totalCustomer[] = $loan->customer_id;
-
                 }
 
                 $totalCustomerCount = 0;
-                if(!empty($totalCustomer)){
+                if (!empty($totalCustomer)) {
                     $totalCustomer = array_unique($totalCustomer);
                     $totalCustomerCount = count($totalCustomer);
                 }
                 $loanData = [
                     'loans' => $loans,
                     'total_remaining_amount' => $totalRemaingAmount,
-                    'total_cusotomer' => $totalCustomerCount 
+                    'total_cusotomer' => $totalCustomerCount
                 ];
                 return sendSuccessResponse('Loans found successfully!', 200, $loanData);
             }
-        }
-        catch (\Exception $e) {
-            return sendErrorResponse($e->getMessage().' on line '.$e->getLine(), 500);
+        } catch (\Exception $e) {
+            return sendErrorResponse($e->getMessage() . ' on line ' . $e->getLine(), 500);
         }
     }
 
@@ -992,7 +931,7 @@ class CustomerLoanController extends Controller
         }
 
         $companyId  = $request->company_id ?? 1;
-        
+
 
         // Create new Spreadsheet object
         $spreadsheet = new Spreadsheet();
@@ -1017,31 +956,28 @@ class CustomerLoanController extends Controller
 
 
         // Retrieve your data from the database (example: getting users)
-        $loans = $this->customerLoanRepository->getAllCustomerLoans($companyId,$loanStatus,$status);
+        $loans = $this->customerLoanRepository->getAllCustomerLoans($companyId, $loanStatus, $status);
 
         // Populate the spreadsheet with data
         $row = 2; // Start from row 2 to avoid overwriting headers
         foreach ($loans as $loan) {
-            $memberName = isset($loan->member) && $loan->member!=null ? $loan->member->name : '';
-            $customerName = isset($loan->customer) && $loan->customer!=null ? $loan->customer->name : '';
+            $memberName = isset($loan->member) && $loan->member != null ? $loan->member->name : '';
+            $customerName = isset($loan->customer) && $loan->customer != null ? $loan->customer->name : '';
             $appliedBy  = '';
-            if($loan->applied_user_type==3)
-            {
+            if ($loan->applied_user_type == 3) {
                 $appliedBy = 'self';
-            }
-            else if($loan->applied_user_type==2){
+            } else if ($loan->applied_user_type == 2) {
                 $member = $this->memberRepository->getMemberByUserId($loan->applied_by);
-                if($member)
-                {
+                if ($member) {
                     $appliedBy = $member->name;
                 }
             }
-            
+
             $paidAmount = $this->loanHistoryRepository->getTotalPaidAmount($loan->id);
             $paidAmount = (float)$paidAmount;
             $remaingAmount = (float)($loan->loan_amount - $paidAmount);
 
-            $sheet->setCellValue('A' . $row, $row-1);
+            $sheet->setCellValue('A' . $row, $row - 1);
             $sheet->setCellValue('B' . $row, $loan->loan_no);
             $sheet->setCellValue('c' . $row, $loan->loan_amount);
             $sheet->setCellValue('d' . $row, $loan->installment_amount);
@@ -1086,7 +1022,7 @@ class CustomerLoanController extends Controller
         $fullUrl = downloadFileUrl($fileName);
 
         // Return success response with download URL
-        return sendSuccessResponse('Loan data is ready for download.',200, ['download_url' => $fullUrl]);
+        return sendSuccessResponse('Loan data is ready for download.', 200, ['download_url' => $fullUrl]);
     }
 
     public function downloadLoanHistory(Request $request)
@@ -1100,7 +1036,7 @@ class CustomerLoanController extends Controller
         }
 
         $loanId = $request->loan_id;
-        
+
 
         // Create new Spreadsheet object
         $spreadsheet = new Spreadsheet();
@@ -1130,27 +1066,24 @@ class CustomerLoanController extends Controller
 
         // Populate the spreadsheet with data
         $row = 2; // Start from row 2 to avoid overwriting headers
-    
-        $memberName = isset($loan->member) && $loan->member!=null ? $loan->member->name : '';
-        $customerName = isset($loan->customer) && $loan->customer!=null ? $loan->customer->name : '';
+
+        $memberName = isset($loan->member) && $loan->member != null ? $loan->member->name : '';
+        $customerName = isset($loan->customer) && $loan->customer != null ? $loan->customer->name : '';
         $appliedBy  = '';
-        if($loan->applied_user_type==3)
-        {
+        if ($loan->applied_user_type == 3) {
             $appliedBy = 'self';
-        }
-        else if($loan->applied_user_type==2){
+        } else if ($loan->applied_user_type == 2) {
             $member = $this->memberRepository->getMemberByUserId($loan->applied_by);
-            if($member)
-            {
+            if ($member) {
                 $appliedBy = $member->name;
             }
         }
-        
+
         $paidAmount = $this->loanHistoryRepository->getTotalPaidAmount($loan->id);
         $paidAmount = (float)$paidAmount;
         $remaingAmount = (float)($loan->loan_amount - $paidAmount);
 
-        $sheet->setCellValue('A' . $row, $row-1);
+        $sheet->setCellValue('A' . $row, $row - 1);
         $sheet->setCellValue('B' . $row, $loan->loan_no);
         $sheet->setCellValue('c' . $row, $loan->loan_amount);
         $sheet->setCellValue('d' . $row, $loan->installment_amount);
@@ -1165,30 +1098,29 @@ class CustomerLoanController extends Controller
         $sheet->setCellValue('m' . $row, $loan->loan_status);
         $sheet->setCellValue('n' . $row, $paidAmount);
         $sheet->setCellValue('o' . $row, $remaingAmount);
-        
-        if(count($loanHistory)>0)
-        {
+
+        if (count($loanHistory) > 0) {
             $sheet->setCellValue('A4', 'Loan History');
-            
-          
+
+
             $sheet->setCellValue('A5', 'Serial No');
             $sheet->setCellValue('B5', 'Amount');
             $sheet->setCellValue('C5', 'Paid Date');
             $sheet->setCellValue('D5', 'Member Name');
-            
+
             $row = 6;
             foreach ($loanHistory as $key => $history) {
-                $sheet->setCellValue('A' . $row, $key+1);
+                $sheet->setCellValue('A' . $row, $key + 1);
                 $sheet->setCellValue('B' . $row, $history->amount);
                 $sheet->setCellValue('C' . $row, carbon::parse($history->paid_date)->format('Y-m-d'));
-                $sheet->setCellValue('D' . $row, isset($history->recieved_member) && $history->recieved_member!=null ? $history->recieved_member->name:'');
+                $sheet->setCellValue('D' . $row, isset($history->recieved_member) && $history->recieved_member != null ? $history->recieved_member->name : '');
                 $row++;
             }
         }
-    
+
 
         // Define a unique file name
-        $fileName = $loan->loan_no.'_'. time() . '.xlsx';
+        $fileName = $loan->loan_no . '_' . time() . '.xlsx';
         $filePath = 'exports/' . $fileName;
 
         // Save the spreadsheet to storage
@@ -1213,34 +1145,35 @@ class CustomerLoanController extends Controller
         $fullUrl = downloadFileUrl($fileName);
 
         // Return success response with download URL
-        return sendSuccessResponse('loan details is ready for download.',200, ['download_url' => $fullUrl]);
+        return sendSuccessResponse('loan details is ready for download.', 200, ['download_url' => $fullUrl]);
     }
 
-    public function customerDashboard(){
+    public function customerDashboard()
+    {
         $userId = auth()->user()->id;
         $customer = $this->customerRepository->getCustomerbyUserId($userId);
-        if(empty($customer)){
+        if (empty($customer)) {
             return sendErrorResponse('Customer not found!', 200);
-        }else{
+        } else {
             $customerId = $customer->id;
             $companyId  = $customer->company_id;
 
             //get customer loan data
-            $totalLoanAmount = $this->customerLoanRepository->getTotalLoanAmount($companyId,null,$customerId);
-            $loanIds         = $this->customerLoanRepository->getRunningLoanIds($companyId,null,$customerId)->toArray();
+            $totalLoanAmount = $this->customerLoanRepository->getTotalLoanAmount($companyId, null, $customerId);
+            $loanIds         = $this->customerLoanRepository->getRunningLoanIds($companyId, null, $customerId)->toArray();
             $totalPaidAmount = 0;
             $totalRemainingAmount = 0;
-            if(count($loanIds)>0){
-                $totalPaidAmount = $this->customerLoanRepository->getPaidAmountByLoanIds($customerId,$loanIds);
-                $totalRemainingAmount = $totalLoanAmount-$totalPaidAmount;
+            if (count($loanIds) > 0) {
+                $totalPaidAmount = $this->customerLoanRepository->getPaidAmountByLoanIds($customerId, $loanIds);
+                $totalRemainingAmount = $totalLoanAmount - $totalPaidAmount;
             }
             $runningLoans = count($loanIds);
 
             //get cutomer Deposit data
-            $depositamount = $this->depositHistoryRepository->getdepositAmountByCustomerId($customerId,'credit');
-            $withdrawamount = $this->depositHistoryRepository->getdepositAmountByCustomerId($customerId,'debit');
+            $depositamount = $this->depositHistoryRepository->getdepositAmountByCustomerId($customerId, 'credit');
+            $withdrawamount = $this->depositHistoryRepository->getdepositAmountByCustomerId($customerId, 'debit');
             $totalDepositamount = $depositamount - $withdrawamount;
-            
+
             $responseData = [
                 'loan_amount'           => (float)$totalLoanAmount,
                 'paid_amount'           => (float)$totalPaidAmount,
@@ -1249,12 +1182,12 @@ class CustomerLoanController extends Controller
                 'daily_amount_balance'  => $totalDepositamount,
             ];
 
-            return sendSuccessResponse('Customer Dashboard Data.',200, $responseData);
-
+            return sendSuccessResponse('Customer Dashboard Data.', 200, $responseData);
         }
     }
 
-    public function companyDashboard(){
+    public function companyDashboard()
+    {
         $userId     = auth()->user()->id;
         $company    = $this->companyRepository->getCompanyIdByUserId($userId);
         $companyId  = $company->id;
@@ -1265,44 +1198,44 @@ class CustomerLoanController extends Controller
         //last date of current month
         $lastDate               = Carbon::now()->endOfMonth()->format('Y-m-d');
 
-        $todayLoanamount = $this->loanHistoryRepository->getLoanReceivedAmountByloanIds($companyId,$loanIds,$today);
-        $monthlyLoanamount = $this->loanHistoryRepository->getLoanReceivedAmountByloanIds($companyId,$loanIds,null,$firstDate,$lastDate);
+        $todayLoanamount = $this->loanHistoryRepository->getLoanReceivedAmountByloanIds($companyId, $loanIds, $today);
+        $monthlyLoanamount = $this->loanHistoryRepository->getLoanReceivedAmountByloanIds($companyId, $loanIds, null, $firstDate, $lastDate);
 
-        $todayDepositamount = $this->depositHistoryRepository->getDepositReceivedAmountByDate($companyId,null,$today);
-        $todayDepositDebitamount = $this->depositHistoryRepository->getDepositReceivedAmountByDate($companyId,null,$today,null,'debit');
-        $monthlyDepositamount = $this->depositHistoryRepository->getDepositReceivedAmountByDatewise($companyId,null,$firstDate,$lastDate);
-        $monthlyDepositDebitamount = $this->depositHistoryRepository->getDepositReceivedAmountByDatewise($companyId,null,$firstDate,$lastDate,null,'debit');
+        $todayDepositamount = $this->depositHistoryRepository->getDepositReceivedAmountByDate($companyId, null, $today);
+        $todayDepositDebitamount = $this->depositHistoryRepository->getDepositReceivedAmountByDate($companyId, null, $today, null, 'debit');
+        $monthlyDepositamount = $this->depositHistoryRepository->getDepositReceivedAmountByDatewise($companyId, null, $firstDate, $lastDate);
+        $monthlyDepositDebitamount = $this->depositHistoryRepository->getDepositReceivedAmountByDatewise($companyId, null, $firstDate, $lastDate, null, 'debit');
 
         //this month start deposit customers
-        $recentDepositCustomer = $this->customerDepositRepository->getDepositCustomersIdbyCompany($companyId,$firstDate,$lastDate);
+        $recentDepositCustomer = $this->customerDepositRepository->getDepositCustomersIdbyCompany($companyId, $firstDate, $lastDate);
         //total deposit customers
         $totalDepositCustomer = $this->customerDepositRepository->getDepositCustomersIdbyCompany($companyId);
         //this month start loan customers
-        $recentLoanCustomer = $this->customerLoanRepository->getLoanCustomersIdbyCompany($companyId,$firstDate,$lastDate);
+        $recentLoanCustomer = $this->customerLoanRepository->getLoanCustomersIdbyCompany($companyId, $firstDate, $lastDate);
         //total loan customers
         $totalLoanCustomer = $this->customerLoanRepository->getLoanCustomersIdbyCompany($companyId);
 
         $recentCustomer = 0;
-        if(count($recentDepositCustomer)>0 && count($recentLoanCustomer)>0){
-            $recentCustomer = count(array_unique(array_merge($recentDepositCustomer,$recentLoanCustomer)));
-        }else if(count($recentDepositCustomer)>0){
+        if (count($recentDepositCustomer) > 0 && count($recentLoanCustomer) > 0) {
+            $recentCustomer = count(array_unique(array_merge($recentDepositCustomer, $recentLoanCustomer)));
+        } else if (count($recentDepositCustomer) > 0) {
             $recentCustomer = count($recentDepositCustomer);
-        }else if(count($recentLoanCustomer)>0){
+        } else if (count($recentLoanCustomer) > 0) {
             $recentCustomer = count($recentLoanCustomer);
         }
 
         $totalCustomer = 0;
-        if(count($totalDepositCustomer)>0 && count($totalLoanCustomer)>0){
-            $totalCustomer = count(array_unique(array_merge($totalDepositCustomer,$totalLoanCustomer)));
-        }else if(count($totalDepositCustomer)>0){
+        if (count($totalDepositCustomer) > 0 && count($totalLoanCustomer) > 0) {
+            $totalCustomer = count(array_unique(array_merge($totalDepositCustomer, $totalLoanCustomer)));
+        } else if (count($totalDepositCustomer) > 0) {
             $totalCustomer = count($totalDepositCustomer);
-        }else if(count($totalLoanCustomer)>0){
+        } else if (count($totalLoanCustomer) > 0) {
             $totalCustomer = count($totalLoanCustomer);
         }
 
         $responseData = [
-            'today_money'                   => $todayLoanamount+($todayDepositamount-$todayDepositDebitamount),
-            'month_collection'              => $monthlyLoanamount+($monthlyDepositamount-$monthlyDepositDebitamount),
+            'today_money'                   => $todayLoanamount + ($todayDepositamount - $todayDepositDebitamount),
+            'month_collection'              => $monthlyLoanamount + ($monthlyDepositamount - $monthlyDepositDebitamount),
             'total_customer'                => $totalCustomer,
             'recent_customer'               => $recentCustomer,
             'today_loan_amount'             => $todayLoanamount,
@@ -1312,21 +1245,21 @@ class CustomerLoanController extends Controller
             'monthly_deposit_debit_amount'  => $monthlyDepositDebitamount
         ];
 
-        return sendSuccessResponse('Company Dashboard Data.',200, $responseData);
-        
+        return sendSuccessResponse('Company Dashboard Data.', 200, $responseData);
     }
 
-    public function deleteLoanDocument($id){
+    public function deleteLoanDocument($id)
+    {
         $document = $this->loanDocumentRepository->find($id);
-        if($document->document_url != null){
-            if(Storage::exists($document->document_url)){
+        if ($document->document_url != null) {
+            if (Storage::exists($document->document_url)) {
                 Storage::delete($document->document_url);
             }
         }
-        if($document->delete()){
-            return sendSuccessResponse('Loan Document Deleted.',200);
-        }else{
-            return sendErrorResponse('Loan Document Not Deleted.',500);
+        if ($document->delete()) {
+            return sendSuccessResponse('Loan Document Deleted.', 200);
+        } else {
+            return sendErrorResponse('Loan Document Not Deleted.', 500);
         }
     }
 }

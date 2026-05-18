@@ -42,8 +42,8 @@ class ScheduleController extends Controller
         $dbName = env('DB_DATABASE');
 
         // Path to mysqldump (Ensure this path is correct)
-        $mysqlDumpPath = '"D:\\xampp\\mysql\\bin\\mysqldump.exe"';
-        // $mysqlDumpPath = '/usr/bin/mysqldump'; // Default location on HostGator
+        //$mysqlDumpPath = '"D:\\xampp\\mysql\\bin\\mysqldump.exe"';
+        $mysqlDumpPath = '/usr/bin/mysqldump'; // Default location on HostGator
 
 
         // Backup file name and path

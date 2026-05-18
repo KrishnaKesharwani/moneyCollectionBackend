@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\FixedDepositController;
 use App\Http\Controllers\Api\FixedDepositHistoryController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\VcpaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -62,6 +63,23 @@ Route::middleware('api')->group(function () {
         Route::post('updatevc', [VcController::class, 'update']);
         Route::post('vcs', [VcController::class, 'index']);
         Route::put('updatevcstatus', [VcController::class, 'updatevcStatus']);
+        Route::post('vc/status/update', [VcController::class, 'updateVcStatusByCompany']);
+        Route::post('vc/instalment/add', [VcController::class, 'addVcInstalment']);
+        Route::post('vc/instalment/customer/add', [VcController::class, 'addInstalmentCustomer']);
+        Route::post('vc/customer/add', [VcController::class, 'addCustomerToVc']);
+        Route::post('/vc/customer/remove', [VcController::class, 'removeCustomerFromVc']);
+        Route::post('uservcs', [VcController::class, 'customerVcList']);
+
+        /*Route::postSSSS/vcpayments/store', [VcpaymentController::class, 'store']);
+        Route::post('/vcpayments/update/{id}', [VcpaymentController::class, 'update']);
+        */
+        Route::post('vcpayments/store', [VcpaymentController::class, 'store']);
+        Route::post('vcpayments/update', [VcpaymentController::class, 'update']);
+        Route::get('vcpayments/edit', [VcpaymentController::class, 'edit']);
+        Route::post('vcpayments/customerPaymentStatus', [VcpaymentController::class, 'customerPaymentStatus']);
+
+      
+
       
 
         //memberFinance

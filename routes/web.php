@@ -13,6 +13,9 @@ use App\Http\Controllers\ScheduleController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+Route::get('/login', function () {
+    return response()->json(['message' => 'Login route not available for API'], 404);
+})->name('login');
 
 Route::get('/', function () {
     return view('welcome');
